@@ -10,6 +10,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
+
+    Route::livewire('products', 'pages::products.index')->name('products.index');
+    Route::livewire('inventory/movements', 'pages::inventory.movements.index')->name('inventory.movements.index');
+    Route::livewire('inventory/adjustments/create', 'pages::inventory.adjustments.create')->name('inventory.adjustments.create');
 });
 
 require __DIR__.'/settings.php';

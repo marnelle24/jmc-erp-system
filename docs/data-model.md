@@ -15,7 +15,7 @@ This section describes **directional** entities for the JMC ERP domain. Physical
 |---------|---------|
 | **Suppliers** | Vendors for procurement and AP |
 | **Customers** | Buyers for sales and AR |
-| **Products** | Items that can be bought, sold, and stored |
+| **Products** | Items that can be bought, sold, and stored (no standalone stock quantity column—balances derive from movements) |
 
 ## Operational documents
 
@@ -24,6 +24,13 @@ This section describes **directional** entities for the JMC ERP domain. Physical
 | **Purchase orders** | Commitments to buy from suppliers |
 | **Sales orders** | Commitments to sell to customers |
 | **Inventory movements** | **Authoritative** log of quantity changes (receipts, issues, adjustments, transfers as modeled) |
+
+### Physical columns (inventory)
+
+- **`products`:** `tenant_id`, `name`, optional `sku` (unique per tenant), optional `description`.
+- **`inventory_movements`:** `tenant_id`, `product_id`, signed `quantity` (decimal), `movement_type` (`receipt`, `issue`, `adjustment`, `transfer`), optional `notes`, optional polymorphic `reference` for future document links (PO, shipment, etc.).
+
+On-hand quantity for a product is the **sum** of `inventory_movements.quantity` for that product (within the tenant).
 
 ## Relationships (conceptual)
 
