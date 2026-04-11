@@ -32,6 +32,11 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::livewire('sales/orders/{id}/invoice', 'pages::sales.orders.invoice')->name('sales.orders.invoice');
     Route::livewire('sales/orders/{id}', 'pages::sales.orders.show')->name('sales.orders.show');
     Route::livewire('sales/orders', 'pages::sales.orders.index')->name('sales.orders.index');
+
+    Route::livewire('accounting/payables', 'pages::accounting.payables.index')->name('accounting.payables.index');
+    Route::livewire('accounting/receivables', 'pages::accounting.receivables.index')->name('accounting.receivables.index');
+    Route::livewire('accounting/supplier-payments/create', 'pages::accounting.supplier-payments.create')->name('accounting.supplier-payments.create');
+    Route::livewire('accounting/customer-payments/create', 'pages::accounting.customer-payments.create')->name('accounting.customer-payments.create');
 });
 
 require __DIR__.'/settings.php';

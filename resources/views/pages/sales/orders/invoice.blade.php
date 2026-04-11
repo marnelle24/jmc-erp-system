@@ -41,7 +41,9 @@ class extends Component {
         $this->issued_at = now()->format('Y-m-d\TH:i');
 
         foreach ($this->salesOrder->lines as $line) {
-            $this->invoiceQty[$line->id] = '';
+            $invoiced = $line->totalInvoicedQuantity();
+            $remaining = bcsub((string) $line->quantity_ordered, $invoiced, 4);
+            $this->invoiceQty[$line->id] = bccomp($remaining, '0', 4) === 1 ? $remaining : '';
             $this->unitPrice[$line->id] = $line->unit_price !== null ? (string) $line->unit_price : '';
         }
     }
@@ -95,7 +97,7 @@ class extends Component {
 <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
     <div>
         <flux:heading size="xl">{{ __('Invoice for sales order #:id', ['id' => $salesOrder->id]) }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Invoice up to shipped quantities per line. Links to this order for accounts receivable.') }}</flux:text>
+        <flux:text class="mt-1">{{ __('Invoice quantities are capped by what was ordered on each line (cumulative across invoices). Shipped amounts are shown for reference. Links to this order for accounts receivable.') }}</flux:text>
     </div>
 
     <form wire:submit="issueInvoice" class="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
@@ -116,13 +118,14 @@ class extends Component {
                 @php
                     $shipped = $line->totalShippedQuantity();
                     $invoiced = $line->totalInvoicedQuantity();
-                    $invRem = bcsub($shipped, $invoiced, 4);
+                    $invRem = bcsub((string) $line->quantity_ordered, $invoiced, 4);
                 @endphp
                 <div wire:key="inv-line-{{ $line->id }}" class="grid gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-2">
                     <div class="md:col-span-2">
                         <flux:text class="font-medium">{{ $line->product->name }}</flux:text>
                         <flux:text class="text-sm text-zinc-500">
-                            {{ __('Shipped: :s · Invoiced: :i · Remaining to invoice: :r', [
+                            {{ __('Ordered: :o · Shipped: :s · Invoiced: :i · Remaining to invoice: :r', [
+                                'o' => \Illuminate\Support\Number::format((float) $line->quantity_ordered, maxPrecision: 4),
                                 's' => \Illuminate\Support\Number::format((float) $shipped, maxPrecision: 4),
                                 'i' => \Illuminate\Support\Number::format((float) $invoiced, maxPrecision: 4),
                                 'r' => \Illuminate\Support\Number::format((float) $invRem, maxPrecision: 4),

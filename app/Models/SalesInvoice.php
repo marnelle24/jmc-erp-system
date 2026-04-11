@@ -6,6 +6,7 @@ use App\Enums\SalesInvoiceStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SalesInvoice extends Model
 {
@@ -54,5 +55,13 @@ class SalesInvoice extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(SalesInvoiceLine::class);
+    }
+
+    /**
+     * @return HasOne<AccountsReceivable, $this>
+     */
+    public function accountsReceivable(): HasOne
+    {
+        return $this->hasOne(AccountsReceivable::class);
     }
 }

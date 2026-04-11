@@ -43,6 +43,21 @@
                         {{ __('Sales orders') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Accounting')" class="grid">
+                    <flux:sidebar.item icon="banknotes" :href="route('accounting.payables.index')" :current="request()->routeIs('accounting.payables.*')" wire:navigate>
+                        {{ __('Payables') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="currency-dollar" :href="route('accounting.receivables.index')" :current="request()->routeIs('accounting.receivables.*')" wire:navigate>
+                        {{ __('Receivables') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="arrow-down-tray" :href="route('accounting.supplier-payments.create')" :current="request()->routeIs('accounting.supplier-payments.*')" wire:navigate>
+                        {{ __('Supplier payment') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="arrow-up-tray" :href="route('accounting.customer-payments.create')" :current="request()->routeIs('accounting.customer-payments.*')" wire:navigate>
+                        {{ __('Customer payment') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />

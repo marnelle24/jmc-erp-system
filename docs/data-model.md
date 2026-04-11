@@ -51,7 +51,7 @@ On-hand quantity for a product is the **sum** of `inventory_movements.quantity` 
 - **`sales_order_lines`:** `sales_order_id`, `product_id`, `quantity_ordered`, optional `unit_price`, `position`.
 - **`sales_shipments`:** `tenant_id`, `sales_order_id`, `status` (`posted`; `draft` reserved), `shipped_at`, optional `notes`. Fulfillment posts **issue** inventory movements referenced from **`sales_shipment_lines`**.
 - **`sales_shipment_lines`:** `sales_shipment_id`, `sales_order_line_id`, `quantity_shipped`.
-- **`sales_invoices`:** `tenant_id`, `sales_order_id`, `status` (`issued`; `draft` reserved), `issued_at`, optional **`customer_document_reference`** (AR handoff), optional `notes`. Invoice lines cannot exceed **shipped** quantities per sales order line.
+- **`sales_invoices`:** `tenant_id`, `sales_order_id`, `status` (`issued`; `draft` reserved), `issued_at`, optional **`customer_document_reference`** (AR handoff), optional `notes`. Cumulative **invoice lines per sales order line** cannot exceed **quantity_ordered** (fulfillment is tracked separately via shipments).
 - **`sales_invoice_lines`:** `sales_invoice_id`, `sales_order_line_id`, `quantity_invoiced`, optional `unit_price`.
 
 ## Relationships (conceptual)
@@ -59,6 +59,13 @@ On-hand quantity for a product is the **sum** of `inventory_movements.quantity` 
 - Purchase orders and sales orders line up to **products** and affect **inventory** through **movements**.
 - Accounting **AP** links to supplier-facing documents; **`goods_receipts.supplier_invoice_reference`** ties receiving to the supplier’s bill for later AP posting.
 - Accounting **AR** links to customer-facing documents; **`sales_invoices.customer_document_reference`** ties billing to the customer’s reference for later AR posting.
+
+### Physical columns (accounting)
+
+- **`accounts_receivable`:** `tenant_id`, `sales_invoice_id` (unique), `customer_id`, `total_amount`, `amount_paid`, `status` (`open`, `partial`, `paid`), `posted_at`. Created when a sales invoice is issued (line totals from invoice lines).
+- **`accounts_payable`:** `tenant_id`, `goods_receipt_id` (unique), `supplier_id`, `total_amount`, `amount_paid`, `status`, `posted_at`. Posted explicitly from a posted goods receipt; amount from receipt lines × PO `unit_cost`.
+- **`supplier_payments` / `customer_payments`:** `tenant_id`, party (`supplier_id` / `customer_id`), `amount`, `paid_at`, optional `reference`, `notes`.
+- **`supplier_payment_allocations` / `customer_payment_allocations`:** link a payment to one payable/receivable with an `amount`; sum of allocations equals the payment `amount`, and cannot exceed the open balance on each open item.
 
 ## Indexing and integrity
 

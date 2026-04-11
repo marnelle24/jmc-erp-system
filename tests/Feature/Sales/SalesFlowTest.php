@@ -6,6 +6,7 @@ use App\Domains\Inventory\Services\PostInventoryMovementService;
 use App\Domains\Sales\Services\CreateSalesOrderService;
 use App\Domains\Sales\Services\IssueSalesInvoiceService;
 use App\Domains\Sales\Services\PostSalesShipmentService;
+use App\Enums\AccountingOpenItemStatus;
 use App\Enums\InventoryMovementType;
 use App\Enums\SalesInvoiceStatus;
 use App\Enums\SalesOrderStatus;
@@ -23,7 +24,7 @@ class SalesFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_shipment_creates_issue_movements_and_invoice_respects_shipped_quantities(): void
+    public function test_shipment_creates_issue_movements_and_invoice_respects_ordered_quantities(): void
     {
         $user = User::factory()->create();
         $tenant = Tenant::factory()->create();
@@ -114,9 +115,18 @@ class SalesFlowTest extends TestCase
 
         $invLine = SalesInvoiceLine::query()->where('sales_invoice_id', $invoice->id)->firstOrFail();
         $this->assertSame('10.0000', (string) $invLine->quantity_invoiced);
+
+        $this->assertDatabaseHas('accounts_receivable', [
+            'tenant_id' => $tenant->id,
+            'sales_invoice_id' => $invoice->id,
+            'customer_id' => $customer->id,
+            'total_amount' => '250.0000',
+            'amount_paid' => '0.0000',
+            'status' => AccountingOpenItemStatus::Open->value,
+        ]);
     }
 
-    public function test_cannot_invoice_more_than_shipped(): void
+    public function test_cannot_invoice_more_than_ordered(): void
     {
         $user = User::factory()->create();
         $tenant = Tenant::factory()->create();
@@ -145,22 +155,12 @@ class SalesFlowTest extends TestCase
 
         $line = $order->lines()->firstOrFail();
 
-        app(PostSalesShipmentService::class)->execute(
-            $tenant->id,
-            $order->id,
-            [
-                ['sales_order_line_id' => $line->id, 'quantity_shipped' => '3'],
-            ],
-            now()->toDateTimeString(),
-            null,
-        );
-
         $this->expectException(\InvalidArgumentException::class);
         app(IssueSalesInvoiceService::class)->execute(
             $tenant->id,
             $order->id,
             [
-                ['sales_order_line_id' => $line->id, 'quantity_invoiced' => '5'],
+                ['sales_order_line_id' => $line->id, 'quantity_invoiced' => '11'],
             ],
             now()->toDateTimeString(),
             null,

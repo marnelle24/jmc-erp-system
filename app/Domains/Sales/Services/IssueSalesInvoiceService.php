@@ -2,6 +2,7 @@
 
 namespace App\Domains\Sales\Services;
 
+use App\Domains\Accounting\Services\RegisterAccountsReceivableForInvoiceService;
 use App\Enums\SalesInvoiceStatus;
 use App\Enums\SalesOrderStatus;
 use App\Models\SalesInvoice;
@@ -29,7 +30,7 @@ class IssueSalesInvoiceService
         return DB::transaction(function () use ($tenantId, $salesOrderId, $lines, $issuedAt, $customerDocumentReference, $notes): SalesInvoice {
             $salesOrder = SalesOrder::query()
                 ->where('tenant_id', $tenantId)
-                ->with('lines')
+                ->with('lines.product')
                 ->whereKey($salesOrderId)
                 ->firstOrFail();
 
@@ -50,13 +51,22 @@ class IssueSalesInvoiceService
                     continue;
                 }
 
-                $shipped = $soLine->totalShippedQuantity();
                 $alreadyInvoiced = $soLine->totalInvoicedQuantity();
                 $nextTotal = bcadd($alreadyInvoiced, $quantityInvoiced, 4);
+                $ordered = (string) $soLine->quantity_ordered;
 
-                if (bccomp($nextTotal, $shipped, 4) === 1) {
+                if (bccomp($nextTotal, $ordered, 4) === 1) {
+                    $label = $soLine->relationLoaded('product') && $soLine->product
+                        ? $soLine->product->name
+                        : __('line #:id', ['id' => (string) $soLine->id]);
+
                     throw new InvalidArgumentException(
-                        __('Cannot invoice more than shipped for :product.', ['product' => '#'.$soLine->product_id])
+                        __('Cannot invoice more than ordered for :product. Ordered :ordered; already invoiced :invoiced; this invoice :attempt.', [
+                            'product' => $label,
+                            'ordered' => $ordered,
+                            'invoiced' => $alreadyInvoiced,
+                            'attempt' => $quantityInvoiced,
+                        ])
                     );
                 }
             }
@@ -90,7 +100,11 @@ class IssueSalesInvoiceService
                 ]);
             }
 
-            return $invoice->load('lines');
+            $invoice->refresh()->load('lines');
+
+            app(RegisterAccountsReceivableForInvoiceService::class)->execute($invoice);
+
+            return $invoice->load(['lines', 'accountsReceivable']);
         });
     }
 
