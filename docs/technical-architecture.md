@@ -18,6 +18,7 @@
 
 - **Every persisted table** that holds tenant-owned data includes **`tenant_id`**.
 - **Queries** for tenant data are **always** scoped by tenant (global scopes, policies, or explicit query constraints—choose one consistent approach per layer and document it in code reviews).
+- **Onboarding:** Users register with email/password only. Creating an **organization** (`tenants` + `tenant_user`) happens after login; routes that need ERP context use middleware so users without a tenant are sent to organization creation first. Session stores the active **`current_tenant_id`** for the signed-in user.
 
 ## Typical implementation artifact order
 

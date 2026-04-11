@@ -4,7 +4,10 @@ This section describes **directional** entities for the JMC ERP domain. Physical
 
 ## Tenancy
 
-- All tenant-owned tables include **`tenant_id`** (and typically a foreign key to a `tenants` or equivalent table).
+- **`tenants`** holds one row per organization (business) on the platform.
+- **`tenant_user`** links users to tenants with a **role** (for example `owner`); a user can exist before they belong to any tenant (sign up without an organization).
+- After sign-in, the app requires at least one membership before tenant-scoped ERP routes; **current tenant** is tracked in session (`current_tenant_id`).
+- All tenant-owned business tables include **`tenant_id`** (foreign key to `tenants`).
 
 ## Core reference entities
 
