@@ -22,6 +22,18 @@
                         {{ __('Inventory') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Procurement')" class="grid">
+                    <flux:sidebar.item icon="building-storefront" :href="route('suppliers.index')" :current="request()->routeIs('suppliers.*')" wire:navigate>
+                        {{ __('Suppliers') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="document-text" :href="route('procurement.rfqs.index')" :current="request()->routeIs('procurement.rfqs.*')" wire:navigate>
+                        {{ __('RFQs') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="shopping-cart" :href="route('procurement.purchase-orders.index')" :current="request()->routeIs('procurement.purchase-orders.*')" wire:navigate>
+                        {{ __('Purchase orders') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
