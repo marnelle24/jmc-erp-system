@@ -24,6 +24,14 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::livewire('procurement/purchase-orders/create', 'pages::procurement.purchase-orders.create')->name('procurement.purchase-orders.create');
     Route::livewire('procurement/purchase-orders/{id}', 'pages::procurement.purchase-orders.show')->name('procurement.purchase-orders.show');
     Route::livewire('procurement/purchase-orders/{id}/receive', 'pages::procurement.purchase-orders.receive')->name('procurement.purchase-orders.receive');
+
+    Route::livewire('customers', 'pages::customers.index')->name('customers.index');
+
+    Route::livewire('sales/orders/create', 'pages::sales.orders.create')->name('sales.orders.create');
+    Route::livewire('sales/orders/{id}/ship', 'pages::sales.orders.ship')->name('sales.orders.ship');
+    Route::livewire('sales/orders/{id}/invoice', 'pages::sales.orders.invoice')->name('sales.orders.invoice');
+    Route::livewire('sales/orders/{id}', 'pages::sales.orders.show')->name('sales.orders.show');
+    Route::livewire('sales/orders', 'pages::sales.orders.index')->name('sales.orders.index');
 });
 
 require __DIR__.'/settings.php';

@@ -44,11 +44,21 @@ On-hand quantity for a product is the **sum** of `inventory_movements.quantity` 
 - **`goods_receipts`:** `tenant_id`, `purchase_order_id`, `status` (`posted`; `draft` reserved), `received_at`, optional **`supplier_invoice_reference`** (AP handoff), optional `notes`.
 - **`goods_receipt_lines`:** `goods_receipt_id`, `purchase_order_line_id`, `quantity_received`.
 
+### Physical columns (sales)
+
+- **`customers`:** `tenant_id`, `name`, optional `email`, `phone`, `address`.
+- **`sales_orders`:** `tenant_id`, `customer_id`, `status` (`confirmed`, `partially_fulfilled`, `fulfilled`, `cancelled`), `order_date`, optional `notes`.
+- **`sales_order_lines`:** `sales_order_id`, `product_id`, `quantity_ordered`, optional `unit_price`, `position`.
+- **`sales_shipments`:** `tenant_id`, `sales_order_id`, `status` (`posted`; `draft` reserved), `shipped_at`, optional `notes`. Fulfillment posts **issue** inventory movements referenced from **`sales_shipment_lines`**.
+- **`sales_shipment_lines`:** `sales_shipment_id`, `sales_order_line_id`, `quantity_shipped`.
+- **`sales_invoices`:** `tenant_id`, `sales_order_id`, `status` (`issued`; `draft` reserved), `issued_at`, optional **`customer_document_reference`** (AR handoff), optional `notes`. Invoice lines cannot exceed **shipped** quantities per sales order line.
+- **`sales_invoice_lines`:** `sales_invoice_id`, `sales_order_line_id`, `quantity_invoiced`, optional `unit_price`.
+
 ## Relationships (conceptual)
 
 - Purchase orders and sales orders line up to **products** and affect **inventory** through **movements**.
 - Accounting **AP** links to supplier-facing documents; **`goods_receipts.supplier_invoice_reference`** ties receiving to the supplier’s bill for later AP posting.
-- Accounting **AR** links to customer-facing documents (for example, sales invoices).
+- Accounting **AR** links to customer-facing documents; **`sales_invoices.customer_document_reference`** ties billing to the customer’s reference for later AR posting.
 
 ## Indexing and integrity
 

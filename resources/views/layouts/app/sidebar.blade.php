@@ -34,6 +34,15 @@
                         {{ __('Purchase orders') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Sales')" class="grid">
+                    <flux:sidebar.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')" wire:navigate>
+                        {{ __('Customers') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="clipboard-document-check" :href="route('sales.orders.index')" :current="request()->routeIs('sales.orders.*')" wire:navigate>
+                        {{ __('Sales orders') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
