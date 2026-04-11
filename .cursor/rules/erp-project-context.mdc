@@ -1,0 +1,14 @@
+---
+description: JMC ERP product scope, stack, and module list for SaaS context
+alwaysApply: true
+---
+
+# Project context
+
+ERP SaaS for procurement, inventory, sales, accounting, and CRM.
+
+**Stack:** Laravel 13, Livewire 4, MySQL.
+
+When implementing features, prefer deliverables in this order when applicable: migration, model, service, Livewire component. Follow service-based architecture and tenant scoping throughout.
+
+For large tasks you may align work with roles: architect (modules, tenancy), backend (Laravel/services), frontend (Livewire), QA (flows and edge cases), refactor (performance).

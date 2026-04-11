@@ -1,0 +1,11 @@
+---
+description: Domain layout, layers, inventory, and multi-tenancy for JMC ERP
+alwaysApply: true
+---
+
+# Architecture
+
+- **Domain structure:** place domain code under `/app/Domains/`.
+- **Flow:** Controllers → Services → Models. Do not put business logic in controllers or Livewire components; use service classes.
+- **Inventory:** use `inventory_movements` for stock changes.
+- **Multi-tenancy:** every table must include `tenant_id`; scope queries by tenant consistently.
