@@ -124,35 +124,35 @@ class extends Component {
                     <flux:table
                         :paginate="$this->products->hasPages() ? $this->products : null"
                         pagination:scroll-to
-                        container:class="px-6"
                     >
                         <flux:table.columns sticky class="bg-white dark:bg-white/10">
-                            <flux:table.column class="!px-4 !py-4">{{ __('Name') }}</flux:table.column>
-                            <flux:table.column class="!px-4 !py-4">{{ __('SKU') }}</flux:table.column>
-                            <flux:table.column align="end" class="!px-4 !py-4">{{ __('On hand') }}</flux:table.column>
-                            <flux:table.column align="end" class="w-0 whitespace-nowrap !px-4 !py-4">{{ __('Actions') }}</flux:table.column>
+                            <flux:table.column class="px-6!">{{ __('Name') }}</flux:table.column>
+                            <flux:table.column class="px-6!">{{ __('SKU') }}</flux:table.column>
+                            <flux:table.column align="end" class="px-6!">{{ __('On hand') }}</flux:table.column>
+                            <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!">{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
                         <flux:table.rows>
                             @foreach ($this->products as $product)
                                 <flux:table.row :key="$product->id">
-                                    <flux:table.cell variant="strong" class="!px-4 !py-4">{{ $product->name }}</flux:table.cell>
-                                    <flux:table.cell class="!px-4 !py-4">
+                                    <flux:table.cell variant="strong" class="px-6!">{{ $product->name }}</flux:table.cell>
+                                    <flux:table.cell class="px-6!">
                                         @if ($product->sku)
                                             <flux:badge color="zinc" size="sm" inset="top bottom">{{ $product->sku }}</flux:badge>
                                         @else
                                             <flux:text class="text-zinc-400">—</flux:text>
                                         @endif
                                     </flux:table.cell>
-                                    <flux:table.cell align="end" class="!px-4 !py-4">
+                                    <flux:table.cell align="end" class="px-6!">
                                         <span class="tabular-nums">{{ number_format((float) ($product->inventory_movements_sum_quantity ?? 0), 2) }}</span>
                                     </flux:table.cell>
-                                    <flux:table.cell align="end" class="!px-4 !py-4">
+                                    <flux:table.cell align="end" class="px-6!">
                                         <flux:button
                                             type="button"
-                                            size="sm"
+                                            size="xs"
                                             variant="ghost"
                                             wire:click="startEdit({{ $product->id }})"
                                             inset="top bottom"
+                                            class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
                                         >
                                             {{ __('Edit') }}
                                         </flux:button>
@@ -187,12 +187,18 @@ class extends Component {
                         />
                         <flux:textarea wire:model="description" :label="__('Description')" rows="3" />
                     </flux:fieldset>
-                    <div class="mt-4 flex flex-col gap-2">
+                    <div class="mt-4 flex flex-col gap-2 space-y-4">
                         <flux:button variant="primary" type="submit" class="w-full">
                             {{ $this->editingProductId ? __('Update product') : __('Save product') }}
                         </flux:button>
                         @if ($this->editingProductId)
-                            <flux:button type="button" variant="ghost" class="w-full" wire:click="cancelEdit">
+                            <flux:button 
+                                type="button" 
+                                variant="ghost" 
+                                wire:click="cancelEdit"
+                                inset="top bottom"
+                                class="cursor-pointer text-xs! w-full border border-zinc-200 dark:border-white/40"
+                            >
                                 {{ __('Cancel') }}
                             </flux:button>
                         @endif
