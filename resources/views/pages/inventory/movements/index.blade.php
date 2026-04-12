@@ -29,7 +29,7 @@ class extends Component {
     }
 }; ?>
 
-<div class="flex w-full flex-1 flex-col gap-6">
+<div class="flex w-full flex-1 flex-col gap-8">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">{{ __('Inventory movements') }}</flux:heading>
@@ -40,51 +40,48 @@ class extends Component {
         </flux:button>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 dark:bg-zinc-800/50">
-                    <tr>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('When') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Product') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Type') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Quantity') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Notes') }}</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                    @forelse ($this->movements as $movement)
-                        <tr wire:key="movement-{{ $movement->id }}">
-                            <td class="whitespace-nowrap px-6 py-3 text-zinc-600 dark:text-zinc-400">
-                                {{ $movement->created_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}
-                            </td>
-                            <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">
-                                {{ $movement->product->name }}
-                            </td>
-                            <td class="px-6 py-3 capitalize text-zinc-700 dark:text-zinc-300">
-                                {{ $movement->movement_type->value }}
-                            </td>
-                            <td class="px-6 py-3 text-end tabular-nums text-zinc-900 dark:text-zinc-100">
-                                {{ \Illuminate\Support\Number::format((float) $movement->quantity, maxPrecision: 4) }}
-                            </td>
-                            <td class="max-w-xs truncate px-6 py-3 text-zinc-600 dark:text-zinc-400">
-                                {{ $movement->notes ?? '—' }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-zinc-500">
-                                {{ __('No movements yet. Record an adjustment or wait for procurement / sales posting.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+    <flux:card class="flex flex-col overflow-hidden p-0">
+        <div class="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
+            <flux:heading size="lg">{{ __('Movement log') }}</flux:heading>
+            <flux:text class="mt-1 text-sm">{{ __('Chronological entries with product, type, quantity, and notes.') }}</flux:text>
         </div>
-        @if ($this->movements->hasPages())
-            <div class="border-t border-zinc-200 px-6 py-4 dark:border-zinc-700">
-                {{ $this->movements->links() }}
+
+        @if ($this->movements->isEmpty())
+            <div class="p-6">
+                <flux:callout icon="arrows-right-left" color="zinc" inline :heading="__('No movements yet')" :text="__('Record an adjustment or wait for procurement / sales posting.')" />
             </div>
+        @else
+            <flux:table
+                :paginate="$this->movements->hasPages() ? $this->movements : null"
+                pagination:scroll-to
+            >
+                <flux:table.columns sticky class="bg-white dark:bg-white/10">
+                    <flux:table.column class="px-6!">{{ __('When') }}</flux:table.column>
+                    <flux:table.column class="px-6!">{{ __('Product') }}</flux:table.column>
+                    <flux:table.column class="px-6!">{{ __('Type') }}</flux:table.column>
+                    <flux:table.column align="end" class="px-6!">{{ __('Quantity') }}</flux:table.column>
+                    <flux:table.column class="px-6!">{{ __('Notes') }}</flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    @foreach ($this->movements as $movement)
+                        <flux:table.row :key="$movement->id">
+                            <flux:table.cell class="whitespace-nowrap px-6! text-zinc-600 dark:text-zinc-400">
+                                {{ $movement->created_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}
+                            </flux:table.cell>
+                            <flux:table.cell variant="strong" class="px-6!">{{ $movement->product->name }}</flux:table.cell>
+                            <flux:table.cell class="px-6!">
+                                <flux:badge color="zinc" size="sm" inset="top bottom" class="capitalize">{{ $movement->movement_type->value }}</flux:badge>
+                            </flux:table.cell>
+                            <flux:table.cell align="end" class="px-6!">
+                                <span class="tabular-nums">{{ \Illuminate\Support\Number::format((float) $movement->quantity, maxPrecision: 4) }}</span>
+                            </flux:table.cell>
+                            <flux:table.cell class="max-w-xs truncate px-6! text-zinc-600 dark:text-zinc-400">
+                                {{ $movement->notes ?? '—' }}
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforeach
+                </flux:table.rows>
+            </flux:table>
         @endif
-    </div>
+    </flux:card>
 </div>
