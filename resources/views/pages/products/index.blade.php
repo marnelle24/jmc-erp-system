@@ -103,17 +103,17 @@ class extends Component {
 
 <div class="flex w-full flex-1 flex-col gap-8">
     <div>
-        <flux:heading size="xl">{{ __('Products') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Items you stock. Quantities come only from inventory movements.') }}</flux:text>
+        <flux:heading size="xl">{{ __('Products Management') }}</flux:heading>
+        <flux:text class="mt-1">{{ __('Manage your products. Add, edit, and delete products as needed.') }}</flux:text>
     </div>
 
     {{-- Flex keeps the form column on the right; min-w-0 lets the table shrink inside the row. --}}
     <div class="flex w-full flex-col items-stretch gap-6 md:flex-row md:items-start">
         <div class="min-w-0 w-full basis-full md:basis-0 md:flex-[3]">
-            <flux:card class="flex flex-col overflow-hidden p-0">
+            <flux:card class="flex flex-col overflow-hidden p-0 bg-neutral-100 dark:bg-neutral-700 border border-zinc-300 dark:border-zinc-300/40">
                 <div class="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
-                    <flux:heading size="lg">{{ __('Catalog') }}</flux:heading>
-                    <flux:text class="mt-1 text-sm">{{ __('All products in this tenant, with on-hand from posted movements.') }}</flux:text>
+                    <flux:heading size="lg">{{ __('Products Master List') }}</flux:heading>
+                    <flux:text class="mt-1 text-sm">{{ __('All products recorded in the system, with on-hand from posted movements.') }}</flux:text>
                 </div>
 
                 @if ($this->products->isEmpty())
@@ -125,7 +125,7 @@ class extends Component {
                         :paginate="$this->products->hasPages() ? $this->products : null"
                         pagination:scroll-to
                     >
-                        <flux:table.columns sticky class="bg-white dark:bg-white/10">
+                        <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                             <flux:table.column class="px-6!">{{ __('Name') }}</flux:table.column>
                             <flux:table.column class="px-6!">{{ __('SKU') }}</flux:table.column>
                             <flux:table.column align="end" class="px-6!">{{ __('On hand') }}</flux:table.column>
@@ -166,7 +166,7 @@ class extends Component {
         </div>
 
         <aside class="w-full min-w-0 shrink-0 basis-full md:basis-0 md:flex-[1] md:sticky md:top-4 md:self-start">
-            <flux:card size="sm">
+            <flux:card size="sm" class="bg-neutral-100 dark:bg-neutral-700 border border-zinc-300 dark:border-zinc-300/40">
                 <flux:heading size="lg">{{ $this->editingProductId ? __('Edit product') : __('Add product') }}</flux:heading>
                 <flux:text class="mt-1 text-sm">
                     @if ($this->editingProductId)
@@ -187,8 +187,8 @@ class extends Component {
                         />
                         <flux:textarea wire:model="description" :label="__('Description')" rows="3" />
                     </flux:fieldset>
-                    <div class="mt-4 flex flex-col gap-2 space-y-4">
-                        <flux:button variant="primary" type="submit" class="w-full">
+                    <div class="my-4 flex flex-col gap-2 space-y-2">
+                        <flux:button variant="primary" type="submit" class="w-full cursor-pointer">
                             {{ $this->editingProductId ? __('Update product') : __('Save product') }}
                         </flux:button>
                         @if ($this->editingProductId)
