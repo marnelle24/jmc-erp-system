@@ -28,10 +28,10 @@
                         {{ __('Suppliers') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="document-text" :href="route('procurement.rfqs.index')" :current="request()->routeIs('procurement.rfqs.*')" wire:navigate>
-                        {{ __('RFQs') }}
+                        {{ __('Purchase Requests') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="shopping-cart" :href="route('procurement.purchase-orders.index')" :current="request()->routeIs('procurement.purchase-orders.*')" wire:navigate>
-                        {{ __('Purchase orders') }}
+                        {{ __('Purchase Orders') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
@@ -40,29 +40,29 @@
                         {{ __('Customers') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="clipboard-document-check" :href="route('sales.orders.index')" :current="request()->routeIs('sales.orders.*')" wire:navigate>
-                        {{ __('Sales orders') }}
+                        {{ __('Sales Orders') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Accounting')" class="grid">
                     <flux:sidebar.item icon="banknotes" :href="route('accounting.payables.index')" :current="request()->routeIs('accounting.payables.*')" wire:navigate>
-                        {{ __('Payables') }}
+                        {{ __('Accounts Payable') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="currency-dollar" :href="route('accounting.receivables.index')" :current="request()->routeIs('accounting.receivables.*')" wire:navigate>
-                        {{ __('Receivables') }}
+                        {{ __('Accounts Receivable') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="arrow-down-tray" :href="route('accounting.supplier-payments.create')" :current="request()->routeIs('accounting.supplier-payments.*')" wire:navigate>
-                        {{ __('Supplier payment') }}
+                        {{ __('Supplier Payments') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="arrow-up-tray" :href="route('accounting.customer-payments.create')" :current="request()->routeIs('accounting.customer-payments.*')" wire:navigate>
-                        {{ __('Customer payment') }}
+                        {{ __('Customer Payments') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
-            <flux:sidebar.nav>
+            {{-- <flux:sidebar.nav>
                 <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
                     {{ __('Repository') }}
                 </flux:sidebar.item>
@@ -70,7 +70,7 @@
                 <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
                     {{ __('Documentation') }}
                 </flux:sidebar.item>
-            </flux:sidebar.nav>
+            </flux:sidebar.nav> --}}
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>

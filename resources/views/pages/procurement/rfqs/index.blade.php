@@ -32,10 +32,10 @@ class extends Component {
 <div class="flex w-full flex-1 flex-col gap-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">{{ __('Requests for quotation (RFQ)') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Sourcing step before committing to a purchase order.') }}</flux:text>
+            <flux:heading size="xl">{{ __('Purchase Requests') }}</flux:heading>
+            <flux:text class="mt-1">{{ __('Create a purchase request to initiate the procurement process.') }}</flux:text>
         </div>
-        <flux:button :href="route('procurement.rfqs.create')" variant="primary" wire:navigate>{{ __('New RFQ') }}</flux:button>
+        <flux:button :href="route('procurement.rfqs.create')" variant="primary" wire:navigate>{{ __('Create Purchase Request') }}</flux:button>
     </div>
 
     <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
