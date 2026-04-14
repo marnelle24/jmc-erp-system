@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SupplierPaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,7 @@ class SupplierPayment extends Model
         'tenant_id',
         'supplier_id',
         'amount',
+        'payment_method',
         'paid_at',
         'reference',
         'notes',
@@ -27,6 +29,7 @@ class SupplierPayment extends Model
     {
         return [
             'amount' => 'decimal:4',
+            'payment_method' => SupplierPaymentMethod::class,
             'paid_at' => 'datetime',
         ];
     }

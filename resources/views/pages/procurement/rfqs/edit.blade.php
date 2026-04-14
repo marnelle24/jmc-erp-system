@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Procurement\Services\UpdateRfqService;
+use App\Enums\RfqLineUnitType;
 use App\Enums\RfqStatus;
 use App\Http\Requests\UpdateRfqRequest;
 use App\Models\Product;
@@ -23,7 +24,7 @@ class extends Component {
 
     public string $notes = '';
 
-    /** @var list<array{product_id: string, quantity: string, unit_price: string, notes: string}> */
+    /** @var list<array{product_id: string, quantity: string, unit_type: string, unit_price: string, notes: string}> */
     public array $lines = [];
 
     public function mount(int $id): void
@@ -42,7 +43,7 @@ class extends Component {
             return;
         }
 
-        if (! in_array($this->rfq->status, [RfqStatus::PendingForApproval, RfqStatus::Sent], true)) {
+        if (! in_array($this->rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo, RfqStatus::Sent], true)) {
             $this->redirect(route('procurement.rfqs.show', $this->rfq, absolute: false), navigate: true);
 
             return;
@@ -57,18 +58,19 @@ class extends Component {
             $this->lines[] = [
                 'product_id' => (string) $line->product_id,
                 'quantity' => (string) $line->quantity,
+                'unit_type' => $line->unit_type->value,
                 'unit_price' => $line->unit_price !== null ? (string) $line->unit_price : '',
                 'notes' => $line->notes ?? '',
             ];
         }
         if ($this->lines === []) {
-            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => '']];
+            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => '']];
         }
     }
 
     public function addLine(): void
     {
-        $this->lines[] = ['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => ''];
+        $this->lines[] = ['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => ''];
     }
 
     public function removeLine(int $index): void
@@ -76,7 +78,7 @@ class extends Component {
         unset($this->lines[$index]);
         $this->lines = array_values($this->lines);
         if ($this->lines === []) {
-            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => '']];
+            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => '']];
         }
     }
 
@@ -118,7 +120,7 @@ class extends Component {
 
 <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
     <div>
-        <flux:heading size="xl">{{ __('Edit RFQ #:id', ['id' => $rfq->id]) }}</flux:heading>
+        <flux:heading size="xl">{{ __('Edit :code', ['code' => $rfq->reference_code]) }}</flux:heading>
         <flux:text class="mt-1">{{ __('Update supplier, notes, and line items.') }}</flux:text>
     </div>
 
@@ -141,7 +143,7 @@ class extends Component {
 
             @foreach ($lines as $index => $line)
                 <div wire:key="rfq-edit-line-{{ $index }}" class="grid gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-12 md:items-end">
-                    <div class="md:col-span-4">
+                    <div class="md:col-span-3">
                         <flux:select wire:model="lines.{{ $index }}.product_id" :label="__('Product')" :placeholder="__('Choose…')" required>
                             @foreach ($this->products as $product)
                                 <flux:select.option :value="$product->id">{{ $product->name }} @if ($product->sku) ({{ $product->sku }}) @endif</flux:select.option>
@@ -152,9 +154,16 @@ class extends Component {
                         <flux:input wire:model="lines.{{ $index }}.quantity" :label="__('Qty')" type="text" inputmode="decimal" required />
                     </div>
                     <div class="md:col-span-2">
-                        <flux:input wire:model="lines.{{ $index }}.unit_price" :label="__('Est. unit price')" type="text" inputmode="decimal" />
+                        <flux:select wire:model="lines.{{ $index }}.unit_type" :label="__('Unit type')" required>
+                            @foreach (RfqLineUnitType::cases() as $unitType)
+                                <flux:select.option :value="$unitType->value">{{ $unitType->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
                     </div>
-                    <div class="md:col-span-3">
+                    <div class="md:col-span-2">
+                        <flux:input wire:model="lines.{{ $index }}.unit_price" :label="__('Est. unit price')" type="text" inputmode="decimal" :description="__('Optional. Can be updated from the purchase order when goods are received.')" />
+                    </div>
+                    <div class="md:col-span-2">
                         <flux:input wire:model="lines.{{ $index }}.notes" :label="__('Line notes')" type="text" />
                     </div>
                     <div class="md:col-span-1 flex justify-end pb-2">

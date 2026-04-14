@@ -15,9 +15,12 @@ class Rfq extends Model
     protected $fillable = [
         'tenant_id',
         'supplier_id',
+        'reference_code',
         'status',
         'title',
         'notes',
+        'created_by',
+        'approved_by',
     ];
 
     /**
@@ -44,6 +47,22 @@ class Rfq extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     /**

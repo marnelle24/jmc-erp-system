@@ -21,6 +21,7 @@ class RecordSupplierPaymentService
         string $paidAt,
         ?string $reference,
         ?string $notes,
+        string $paymentMethod,
         array $allocations,
     ): SupplierPayment {
         if ($allocations === []) {
@@ -44,11 +45,12 @@ class RecordSupplierPaymentService
             throw new InvalidArgumentException(__('Allocation total must equal the payment amount.'));
         }
 
-        return DB::transaction(function () use ($tenantId, $supplierId, $paymentAmount, $paidAt, $reference, $notes, $allocations): SupplierPayment {
+        return DB::transaction(function () use ($tenantId, $supplierId, $paymentAmount, $paidAt, $reference, $notes, $paymentMethod, $allocations): SupplierPayment {
             $payment = SupplierPayment::query()->create([
                 'tenant_id' => $tenantId,
                 'supplier_id' => $supplierId,
                 'amount' => $paymentAmount,
+                'payment_method' => $paymentMethod,
                 'paid_at' => $paidAt,
                 'reference' => $reference,
                 'notes' => $notes,

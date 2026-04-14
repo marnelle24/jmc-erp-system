@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Procurement\Services\CreateRfqService;
+use App\Enums\RfqLineUnitType;
 use App\Http\Requests\StoreRfqRequest;
 use App\Models\Product;
 use App\Models\Supplier;
@@ -10,8 +11,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::app', ['title' => 'New RFQ'])]
-#[Title('New RFQ')]
+new #[Layout('layouts::app', ['title' => 'Create Request For Quotation'])]
+#[Title('Create Request For Quotation')]
 class extends Component {
     public string $supplier_id = '';
 
@@ -19,20 +20,20 @@ class extends Component {
 
     public string $notes = '';
 
-    /** @var list<array{product_id: string, quantity: string, unit_price: string, notes: string}> */
+    /** @var list<array{product_id: string, quantity: string, unit_type: string, unit_price: string, notes: string}> */
     public array $lines = [];
 
     public function mount(): void
     {
         Gate::authorize('create', \App\Models\Rfq::class);
         $this->lines = [
-            ['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => ''],
+            ['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => ''],
         ];
     }
 
     public function addLine(): void
     {
-        $this->lines[] = ['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => ''];
+        $this->lines[] = ['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => ''];
     }
 
     public function removeLine(int $index): void
@@ -40,7 +41,7 @@ class extends Component {
         unset($this->lines[$index]);
         $this->lines = array_values($this->lines);
         if ($this->lines === []) {
-            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_price' => '', 'notes' => '']];
+            $this->lines = [['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => '']];
         }
     }
 
@@ -50,7 +51,12 @@ class extends Component {
 
         $validated = $this->validate((new StoreRfqRequest)->rules());
 
-        $service->execute((int) session('current_tenant_id'), $validated);
+        $userId = auth()->id();
+        if ($userId === null) {
+            return;
+        }
+
+        $service->execute((int) session('current_tenant_id'), $validated, (int) $userId);
 
         Flux::toast(variant: 'success', text: __('RFQ created.'));
 
@@ -74,7 +80,7 @@ class extends Component {
     }
 }; ?>
 
-<div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
+<div class="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
     <div>
         <flux:heading size="xl">{{ __('New RFQ') }}</flux:heading>
         <flux:text class="mt-1">{{ __('Request pricing from a supplier for one or more products.') }}</flux:text>
@@ -93,8 +99,13 @@ class extends Component {
 
         <div class="space-y-4">
             <div class="flex items-center justify-between">
-                <flux:heading size="lg">{{ __('Line items') }}</flux:heading>
-                <flux:button type="button" wire:click="addLine" variant="ghost" size="sm">{{ __('Add line') }}</flux:button>
+                <div>
+                    <flux:heading size="lg">{{ __('Product Items') }}</flux:heading>
+                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Optional. Can be updated from the purchase order when goods are received.') }}</flux:text>
+                </div>
+                <flux:button type="button" wire:click="addLine" variant="ghost" size="sm" class="flex-inline items-center gap-2 cursor-pointer bg-zinc-100 border border-zinc-200 dark:bg-zinc-700 dark:border-zinc-600 p-2">
+                    {{ __('Add Product') }}
+                </flux:button>
             </div>
 
             @foreach ($lines as $index => $line)
@@ -106,25 +117,36 @@ class extends Component {
                             @endforeach
                         </flux:select>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-1">
                         <flux:input wire:model="lines.{{ $index }}.quantity" :label="__('Qty')" type="text" inputmode="decimal" required />
                     </div>
                     <div class="md:col-span-2">
-                        <flux:input wire:model="lines.{{ $index }}.unit_price" :label="__('Est. unit price')" type="text" inputmode="decimal" />
+                        <flux:select wire:model="lines.{{ $index }}.unit_type" :label="__('Unit type')" required>
+                            @foreach (RfqLineUnitType::cases() as $unitType)
+                                <flux:select.option :value="$unitType->value">{{ $unitType->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
                     </div>
-                    <div class="md:col-span-3">
-                        <flux:input wire:model="lines.{{ $index }}.notes" :label="__('Line notes')" type="text" />
+                    <div class="md:col-span-2">
+                        <flux:input wire:model="lines.{{ $index }}.unit_price" :label="__('Unit Price')" type="text" inputmode="decimal" />
                     </div>
-                    <div class="md:col-span-1 flex justify-end pb-2">
-                        <flux:button type="button" wire:click="removeLine({{ $index }})" variant="ghost" size="sm">{{ __('Remove') }}</flux:button>
+                    <div class="md:col-span-2">
+                        <flux:input wire:model="lines.{{ $index }}.notes" :label="__('Notes')" type="text" />
+                    </div>
+                    <div class="md:col-span-1 flex justify-end pb-3">
+                        <flux:button type="button" wire:click="removeLine({{ $index }})" class="cursor-pointer dark:text-zinc-100" variant="ghost" size="xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                        </flux:button>
                     </div>
                 </div>
             @endforeach
         </div>
 
         <div class="flex flex-wrap gap-3">
-            <flux:button variant="primary" type="submit">{{ __('Save RFQ') }}</flux:button>
-            <flux:button :href="route('procurement.rfqs.index')" variant="ghost" wire:navigate>{{ __('Cancel') }}</flux:button>
+            <flux:button variant="primary" type="submit">{{ __('Create Request For Quotation') }}</flux:button>
+            <flux:button :href="route('procurement.rfqs.index')" class="cursor-pointer border border-zinc-200 dark:border-zinc-700 dark:bg-zinc-700 dark:text-zinc-100" variant="ghost" wire:navigate>{{ __('Cancel') }}</flux:button>
         </div>
     </form>
 </div>

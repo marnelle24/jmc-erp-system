@@ -10,6 +10,7 @@ use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
+use App\Models\RfqLine;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +107,8 @@ class PostGoodsReceiptService
                 'status' => $this->resolvePurchaseOrderStatus($purchaseOrder),
             ]);
 
+            $this->syncRfqLineUnitPricesFromPurchaseOrder($purchaseOrder, $normalized);
+
             return $goodsReceipt->load('lines');
         });
     }
@@ -153,6 +156,34 @@ class PostGoodsReceiptService
             ->sum('quantity_received');
 
         return $sum === null ? '0' : (string) $sum;
+    }
+
+    /**
+     * When the PO was created from an RFQ, copy the PO line unit cost (actual / booked cost) onto the linked RFQ line
+     * after receipt so estimated unit price reflects post-receipt data.
+     *
+     * @param  array<int, string>  $normalized  keyed by purchase_order_line_id
+     */
+    private function syncRfqLineUnitPricesFromPurchaseOrder(PurchaseOrder $purchaseOrder, array $normalized): void
+    {
+        if ($purchaseOrder->rfq_id === null) {
+            return;
+        }
+
+        foreach (array_keys($normalized) as $purchaseOrderLineId) {
+            $poLine = PurchaseOrderLine::query()
+                ->whereKey($purchaseOrderLineId)
+                ->where('purchase_order_id', $purchaseOrder->id)
+                ->first();
+
+            if ($poLine === null || $poLine->rfq_line_id === null || $poLine->unit_cost === null) {
+                continue;
+            }
+
+            RfqLine::query()->whereKey($poLine->rfq_line_id)->update([
+                'unit_price' => $poLine->unit_cost,
+            ]);
+        }
     }
 
     private function resolvePurchaseOrderStatus(PurchaseOrder $purchaseOrder): PurchaseOrderStatus

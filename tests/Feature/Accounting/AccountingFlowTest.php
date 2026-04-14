@@ -7,6 +7,7 @@ use App\Domains\Accounting\Services\RecordSupplierPaymentService;
 use App\Domains\Procurement\Services\PostGoodsReceiptService;
 use App\Enums\AccountingOpenItemStatus;
 use App\Enums\PurchaseOrderStatus;
+use App\Enums\SupplierPaymentMethod;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -73,6 +74,7 @@ class AccountingFlowTest extends TestCase
             now()->toDateTimeString(),
             'CHK-1',
             null,
+            SupplierPaymentMethod::Cash->value,
             [
                 ['accounts_payable_id' => $ap->id, 'amount' => '10.0000'],
             ],

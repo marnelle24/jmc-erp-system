@@ -2,6 +2,7 @@
 
 use App\Domains\Accounting\Services\RecordSupplierPaymentService;
 use App\Enums\AccountingOpenItemStatus;
+use App\Enums\SupplierPaymentMethod;
 use App\Http\Requests\StoreSupplierPaymentRequest;
 use App\Models\AccountsPayable;
 use App\Models\Supplier;
@@ -21,6 +22,8 @@ class extends Component {
 
     public string $amount = '';
 
+    public string $payment_method = '';
+
     public string $paid_at = '';
 
     public string $reference = '';
@@ -33,6 +36,7 @@ class extends Component {
     public function mount(): void
     {
         Gate::authorize('create', SupplierPayment::class);
+        $this->payment_method = SupplierPaymentMethod::Cash->value;
         $this->paid_at = Carbon::now()->format('Y-m-d\TH:i');
     }
 
@@ -90,6 +94,7 @@ class extends Component {
         $payload = [
             'supplier_id' => $this->supplier_id,
             'amount' => $this->amount,
+            'payment_method' => $this->payment_method,
             'paid_at' => $paidAt,
             'reference' => $this->reference !== '' ? $this->reference : null,
             'notes' => $this->notes !== '' ? $this->notes : null,
@@ -106,6 +111,7 @@ class extends Component {
                 $paidAt,
                 $payload['reference'],
                 $payload['notes'],
+                (string) $payload['payment_method'],
                 $allocations,
             );
             Flux::toast(variant: 'success', text: __('Supplier payment recorded.'));
@@ -142,6 +148,12 @@ class extends Component {
                 inputmode="decimal"
                 required
             />
+
+            <flux:select wire:model="payment_method" :label="__('Payment method')" required>
+                @foreach (SupplierPaymentMethod::cases() as $method)
+                    <flux:select.option :value="$method->value">{{ $method->label() }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
             <flux:input wire:model="paid_at" :label="__('Paid at')" type="datetime-local" required />
 

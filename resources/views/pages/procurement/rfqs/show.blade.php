@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Procurement\Services\ApproveRfqService;
 use App\Domains\Procurement\Services\CreatePurchaseOrderFromRfqService;
 use App\Enums\RfqStatus;
 use App\Models\PurchaseOrder;
@@ -20,7 +21,7 @@ class extends Component {
         $tenantId = (int) session('current_tenant_id');
         $this->rfq = Rfq::query()
             ->where('tenant_id', $tenantId)
-            ->with(['supplier', 'lines.product', 'purchaseOrders'])
+            ->with(['supplier', 'lines.product', 'purchaseOrders', 'creator', 'approver'])
             ->findOrFail($id);
 
         Gate::authorize('view', $this->rfq);
@@ -39,19 +40,45 @@ class extends Component {
         }
     }
 
+    public function approve(ApproveRfqService $service): void
+    {
+        Gate::authorize('approve', $this->rfq);
+
+        $userId = auth()->id();
+        if ($userId === null) {
+            return;
+        }
+
+        try {
+            $this->rfq = $service->execute($this->rfq, (int) $userId);
+            Flux::toast(variant: 'success', text: __('RFQ approved.'));
+        } catch (\InvalidArgumentException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+        }
+    }
+
 }; ?>
 
 <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">{{ __('RFQ #:id', ['id' => $rfq->id]) }}</flux:heading>
+            <flux:heading size="xl">{{ $rfq->reference_code }}</flux:heading>
             <flux:text class="mt-1">{{ $rfq->supplier->name }} · {{ $rfq->status->label() }}</flux:text>
+            <flux:text class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                {{ __('Created by :name', ['name' => $rfq->creator?->name ?? '—']) }}
+                @if ($rfq->approver)
+                    · {{ __('Approved by :name', ['name' => $rfq->approver->name]) }}
+                @endif
+            </flux:text>
         </div>
         <div class="flex flex-wrap gap-2">
-            @if (in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::Sent], true) && $rfq->purchaseOrders->isEmpty())
+            @if ($rfq->status === RfqStatus::PendingForApproval && $rfq->approved_by === null)
+                <flux:button type="button" variant="outline" wire:click="approve">{{ __('Approve') }}</flux:button>
+            @endif
+            @if (in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo, RfqStatus::Sent], true) && $rfq->purchaseOrders->isEmpty())
                 <flux:button :href="route('procurement.rfqs.edit', $rfq)" variant="outline" wire:navigate>{{ __('Edit') }}</flux:button>
             @endif
-            @if ($rfq->status !== RfqStatus::Closed && $rfq->purchaseOrders->isEmpty())
+            @if (in_array($rfq->status, [RfqStatus::ApprovedNoPo, RfqStatus::Sent], true) && $rfq->purchaseOrders->isEmpty())
                 <flux:button variant="primary" wire:click="createPurchaseOrder">{{ __('Create purchase order') }}</flux:button>
             @endif
             <flux:button :href="route('procurement.rfqs.index')" variant="ghost" wire:navigate>{{ __('Back') }}</flux:button>
@@ -78,7 +105,8 @@ class extends Component {
                     <tr>
                         <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Product') }}</th>
                         <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Qty') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Est. price') }}</th>
+                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Unit') }}</th>
+                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Est. unit price') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -86,6 +114,7 @@ class extends Component {
                         <tr wire:key="line-{{ $line->id }}">
                             <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $line->product->name }}</td>
                             <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $line->quantity, maxPrecision: 4) }}</td>
+                            <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $line->unit_type->label() }}</td>
                             <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">
                                 {{ $line->unit_price !== null ? \Illuminate\Support\Number::format((float) $line->unit_price, maxPrecision: 4) : '—' }}
                             </td>

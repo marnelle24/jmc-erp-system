@@ -10,7 +10,7 @@ use InvalidArgumentException;
 class UpdateRfqService
 {
     /**
-     * @param  array{supplier_id: int, title?: string|null, notes?: string|null, lines: list<array{product_id: int, quantity: string, unit_price?: string|null, notes?: string|null}>}  $data
+     * @param  array{supplier_id: int, title?: string|null, notes?: string|null, lines: list<array{product_id: int, quantity: string, unit_type: string, unit_price?: string|null, notes?: string|null}>}  $data
      */
     public function execute(Rfq $rfq, array $data): Rfq
     {
@@ -18,7 +18,7 @@ class UpdateRfqService
             throw new InvalidArgumentException(__('This RFQ can no longer be edited.'));
         }
 
-        if (! in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::Sent], true)) {
+        if (! in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo, RfqStatus::Sent], true)) {
             throw new InvalidArgumentException(__('This RFQ cannot be edited in its current state.'));
         }
 
@@ -35,6 +35,7 @@ class UpdateRfqService
                 $rfq->lines()->create([
                     'product_id' => $line['product_id'],
                     'quantity' => (string) $line['quantity'],
+                    'unit_type' => $line['unit_type'],
                     'unit_price' => isset($line['unit_price']) && $line['unit_price'] !== '' && $line['unit_price'] !== null
                         ? (string) $line['unit_price']
                         : null,

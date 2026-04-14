@@ -14,6 +14,7 @@ class PurchaseOrderLine extends Model
      */
     protected $fillable = [
         'purchase_order_id',
+        'rfq_line_id',
         'product_id',
         'quantity_ordered',
         'unit_cost',
@@ -37,6 +38,14 @@ class PurchaseOrderLine extends Model
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    /**
+     * @return BelongsTo<RfqLine, $this>
+     */
+    public function rfqLine(): BelongsTo
+    {
+        return $this->belongsTo(RfqLine::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RfqLineUnitType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,7 @@ class RfqLine extends Model
         'rfq_id',
         'product_id',
         'quantity',
+        'unit_type',
         'unit_price',
         'notes',
     ];
@@ -25,6 +27,7 @@ class RfqLine extends Model
     {
         return [
             'quantity' => 'decimal:4',
+            'unit_type' => RfqLineUnitType::class,
             'unit_price' => 'decimal:4',
         ];
     }

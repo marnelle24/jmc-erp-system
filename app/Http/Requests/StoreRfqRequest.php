@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\RfqLineUnitType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,6 +38,7 @@ class StoreRfqRequest extends FormRequest
                 Rule::exists('products', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)),
             ],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'lines.*.unit_type' => ['required', Rule::enum(RfqLineUnitType::class)],
             'lines.*.unit_price' => ['nullable', 'numeric', 'gte:0'],
             'lines.*.notes' => ['nullable', 'string', 'max:65535'],
         ];

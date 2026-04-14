@@ -27,6 +27,10 @@ class CreatePurchaseOrderFromRfqService
                 throw new InvalidArgumentException(__('A purchase order has already been created from this RFQ.'));
             }
 
+            if ($rfq->status === RfqStatus::PendingForApproval) {
+                throw new InvalidArgumentException(__('Approve this RFQ before creating a purchase order.'));
+            }
+
             if ($rfq->lines->isEmpty()) {
                 throw new InvalidArgumentException(__('This request for quotation has no line items.'));
             }
@@ -37,6 +41,7 @@ class CreatePurchaseOrderFromRfqService
                     'product_id' => $line->product_id,
                     'quantity_ordered' => (string) $line->quantity,
                     'unit_cost' => $line->unit_price !== null ? (string) $line->unit_price : null,
+                    'rfq_line_id' => $line->id,
                 ];
             }
 

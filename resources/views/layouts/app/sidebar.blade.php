@@ -28,7 +28,7 @@
                         {{ __('Suppliers') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="document-text" :href="route('procurement.rfqs.index')" :current="request()->routeIs('procurement.rfqs.*')" wire:navigate>
-                        {{ __('Purchase Requests') }}
+                        {{ __('Request For Quotations') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="shopping-cart" :href="route('procurement.purchase-orders.index')" :current="request()->routeIs('procurement.purchase-orders.*')" wire:navigate>
                         {{ __('Purchase Orders') }}

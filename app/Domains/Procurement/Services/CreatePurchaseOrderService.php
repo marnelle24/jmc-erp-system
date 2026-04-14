@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class CreatePurchaseOrderService
 {
     /**
-     * @param  array{supplier_id: int, rfq_id?: int|null, order_date: string, notes?: string|null, lines: list<array{product_id: int, quantity_ordered: string, unit_cost?: string|null}>}  $data
+     * @param  array{supplier_id: int, rfq_id?: int|null, order_date: string, notes?: string|null, lines: list<array{product_id: int, quantity_ordered: string, unit_cost?: string|null, rfq_line_id?: int|null}>}  $data
      */
     public function execute(int $tenantId, array $data): PurchaseOrder
     {
@@ -25,6 +25,7 @@ class CreatePurchaseOrderService
 
             foreach ($data['lines'] as $index => $line) {
                 $po->lines()->create([
+                    'rfq_line_id' => isset($line['rfq_line_id']) ? (int) $line['rfq_line_id'] : null,
                     'product_id' => $line['product_id'],
                     'quantity_ordered' => (string) $line['quantity_ordered'],
                     'unit_cost' => isset($line['unit_cost']) && $line['unit_cost'] !== '' && $line['unit_cost'] !== null

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\SupplierPaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,6 +27,7 @@ class StoreSupplierPaymentRequest extends FormRequest
                 Rule::exists('suppliers', 'id')->where('tenant_id', $tenantId),
             ],
             'amount' => ['required', 'regex:/^\d+(\.\d{1,4})?$/'],
+            'payment_method' => ['required', Rule::enum(SupplierPaymentMethod::class)],
             'paid_at' => ['required', 'date'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
