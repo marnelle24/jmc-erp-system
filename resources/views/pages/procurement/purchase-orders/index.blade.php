@@ -29,50 +29,68 @@ class extends Component {
     }
 }; ?>
 
-<div class="flex w-full flex-1 flex-col gap-6">
+<div class="flex w-full flex-1 flex-col gap-8">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">{{ __('Purchase orders') }}</flux:heading>
+            <flux:heading size="xl">{{ __('Purchase Orders Management') }}</flux:heading>
             <flux:text class="mt-1">{{ __('Committed buys from suppliers. Receive goods against an open order.') }}</flux:text>
         </div>
         <flux:button :href="route('procurement.purchase-orders.create')" variant="primary" wire:navigate>{{ __('New purchase order') }}</flux:button>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 dark:bg-zinc-800/50">
-                    <tr>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('PO') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Supplier') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Date') }}</th>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Status') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                    @forelse ($this->purchaseOrders as $po)
-                        <tr wire:key="po-{{ $po->id }}">
-                            <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">#{{ $po->id }}</td>
-                            <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $po->supplier->name }}</td>
-                            <td class="px-6 py-3 text-zinc-600 dark:text-zinc-400">{{ $po->order_date->format('Y-m-d') }}</td>
-                            <td class="px-6 py-3 capitalize text-zinc-700 dark:text-zinc-300">{{ str_replace('_', ' ', $po->status->value) }}</td>
-                            <td class="px-6 py-3 text-end">
-                                <flux:button size="sm" :href="route('procurement.purchase-orders.show', $po)" variant="ghost" wire:navigate>{{ __('View') }}</flux:button>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-zinc-500">{{ __('No purchase orders yet.') }}</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        @if ($this->purchaseOrders->hasPages())
-            <div class="border-t border-zinc-200 px-6 py-4 dark:border-zinc-700">
-                {{ $this->purchaseOrders->links() }}
+    <div class="min-w-0 w-full">
+        <flux:card class="flex flex-col overflow-hidden p-0 bg-neutral-100 dark:bg-neutral-700 border border-zinc-300 dark:border-zinc-300/40">
+            <div class="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
+                <flux:heading size="lg">{{ __('Purchase Order List') }}</flux:heading>
+                <flux:text class="mt-1 text-sm">{{ __('All purchase orders for your organization, including supplier, date, status, and quick access to details.') }}</flux:text>
             </div>
-        @endif
+
+            @if ($this->purchaseOrders->isEmpty())
+                <div class="p-6">
+                    <flux:callout icon="document-text" color="zinc" inline :heading="__('No purchase orders yet')" :text="__('Create a purchase order to commit supplier buys and start receiving goods.')" />
+                </div>
+            @else
+                <flux:table
+                    :paginate="$this->purchaseOrders->hasPages() ? $this->purchaseOrders : null"
+                    pagination:scroll-to
+                >
+                    <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
+                        <flux:table.column class="px-6!">{{ __('Reference') }}</flux:table.column>
+                        <flux:table.column class="px-6!">{{ __('Supplier') }}</flux:table.column>
+                        <flux:table.column class="px-6!">{{ __('Date') }}</flux:table.column>
+                        <flux:table.column class="px-6!">{{ __('Status') }}</flux:table.column>
+                        <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!">{{ __('Actions') }}</flux:table.column>
+                    </flux:table.columns>
+                    <flux:table.rows>
+                        @foreach ($this->purchaseOrders as $po)
+                            <flux:table.row :key="$po->id">
+                                <flux:table.cell variant="strong" class="px-6!">{{ $po->reference_code }}</flux:table.cell>
+                                <flux:table.cell class="px-6!">
+                                    <span class="text-zinc-700 dark:text-zinc-200">{{ $po->supplier->name }}</span>
+                                </flux:table.cell>
+                                <flux:table.cell class="px-6!">
+                                    <span class="tabular-nums text-zinc-700 dark:text-zinc-200">{{ $po->order_date->format('Y-m-d') }}</span>
+                                </flux:table.cell>
+                                <flux:table.cell class="px-6!">
+                                    <span class="text-zinc-700 dark:text-zinc-200">{{ str_replace('_', ' ', $po->status->value) }}</span>
+                                </flux:table.cell>
+                                <flux:table.cell align="end" class="px-6!">
+                                    <flux:button
+                                        size="xs"
+                                        variant="ghost"
+                                        :href="route('procurement.purchase-orders.show', $po)"
+                                        wire:navigate
+                                        inset="top bottom"
+                                        class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
+                                    >
+                                        {{ __('View') }}
+                                    </flux:button>
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @endforeach
+                    </flux:table.rows>
+                </flux:table>
+            @endif
+        </flux:card>
     </div>
 </div>

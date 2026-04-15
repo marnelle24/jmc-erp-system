@@ -32,6 +32,11 @@ class RfqPolicy
         return $this->update($user, $rfq);
     }
 
+    public function markAsSent(User $user, Rfq $rfq): bool
+    {
+        return $this->update($user, $rfq);
+    }
+
     public function delete(User $user, Rfq $rfq): bool
     {
         return $user->tenants()->whereKey($rfq->tenant_id)->exists();

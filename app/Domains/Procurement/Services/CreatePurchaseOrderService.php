@@ -8,15 +8,22 @@ use Illuminate\Support\Facades\DB;
 
 class CreatePurchaseOrderService
 {
+    public function __construct(
+        private readonly AllocatePurchaseOrderReferenceCodeService $referenceCodes,
+    ) {}
+
     /**
      * @param  array{supplier_id: int, rfq_id?: int|null, order_date: string, notes?: string|null, lines: list<array{product_id: int, quantity_ordered: string, unit_cost?: string|null, rfq_line_id?: int|null}>}  $data
      */
     public function execute(int $tenantId, array $data): PurchaseOrder
     {
         return DB::transaction(function () use ($tenantId, $data): PurchaseOrder {
+            $referenceCode = $this->referenceCodes->next($tenantId);
+
             $po = PurchaseOrder::query()->create([
                 'tenant_id' => $tenantId,
                 'supplier_id' => $data['supplier_id'],
+                'reference_code' => $referenceCode,
                 'rfq_id' => $data['rfq_id'] ?? null,
                 'status' => PurchaseOrderStatus::Confirmed,
                 'order_date' => $data['order_date'],

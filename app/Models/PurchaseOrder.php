@@ -15,10 +15,14 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'tenant_id',
         'supplier_id',
+        'reference_code',
         'rfq_id',
         'status',
         'order_date',
         'notes',
+        'closed_at',
+        'closed_by',
+        'close_reason',
     ];
 
     /**
@@ -29,6 +33,7 @@ class PurchaseOrder extends Model
         return [
             'status' => PurchaseOrderStatus::class,
             'order_date' => 'date',
+            'closed_at' => 'datetime',
         ];
     }
 
@@ -70,5 +75,13 @@ class PurchaseOrder extends Model
     public function goodsReceipts(): HasMany
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function closedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
     }
 }

@@ -1,16 +1,19 @@
 <?php
 
+use App\Domains\Procurement\Services\ClosePurchaseOrderService;
 use App\Domains\Accounting\Services\RecordSupplierPaymentService;
 use App\Domains\Accounting\Support\OpenItemStatusResolver;
 use App\Enums\AccountingOpenItemStatus;
 use App\Enums\PurchaseOrderStatus;
 use App\Enums\SupplierPaymentMethod;
+use App\Http\Requests\ClosePurchaseOrderRequest;
 use App\Http\Requests\StoreSupplierPaymentRequest;
 use App\Models\AccountsPayable;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierPayment;
 use Carbon\Carbon;
 use Flux\Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Layout;
@@ -35,12 +38,14 @@ class extends Component {
     /** @var array<int|string, string> */
     public array $allocationAmounts = [];
 
+    public string $close_reason = '';
+
     public function mount(int $id): void
     {
         $tenantId = (int) session('current_tenant_id');
         $this->purchaseOrder = PurchaseOrder::query()
             ->where('tenant_id', $tenantId)
-            ->with(['supplier', 'lines.product', 'goodsReceipts'])
+            ->with(['supplier', 'lines.product', 'goodsReceipts.lines.purchaseOrderLine.product', 'goodsReceipts.accountsPayable', 'closedByUser'])
             ->findOrFail($id);
 
         Gate::authorize('view', $this->purchaseOrder);
@@ -74,6 +79,114 @@ class extends Component {
             ->whereIn('status', [AccountingOpenItemStatus::Open, AccountingOpenItemStatus::Partial])
             ->orderBy('posted_at')
             ->get();
+    }
+
+    public function getAllPayablesForPurchaseOrderProperty()
+    {
+        $tenantId = (int) session('current_tenant_id');
+        $grIds = $this->purchaseOrder->goodsReceipts->pluck('id');
+        if ($grIds->isEmpty()) {
+            return collect();
+        }
+
+        return AccountsPayable::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('goods_receipt_id', $grIds)
+            ->orderBy('posted_at')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function getLineMetricsProperty(): Collection
+    {
+        return $this->purchaseOrder->lines->map(function ($line): array {
+            $received = $line->totalReceivedQuantity();
+            $ordered = (string) $line->quantity_ordered;
+            $remaining = bcsub($ordered, $received, 4);
+
+            return [
+                'line' => $line,
+                'ordered' => $ordered,
+                'received' => $received,
+                'remaining' => $remaining,
+                'completion_percentage' => bccomp($ordered, '0', 4) === 1
+                    ? max(0.0, min(100.0, ((float) $received / (float) $ordered) * 100))
+                    : 0.0,
+            ];
+        });
+    }
+
+    /**
+     * @return array{ordered: string, received: string, remaining: string, progress: float, payable_total: string, payable_paid: string, payable_open: string}
+     */
+    public function getSummaryProperty(): array
+    {
+        $ordered = '0';
+        $received = '0';
+
+        foreach ($this->lineMetrics as $metric) {
+            $ordered = bcadd($ordered, (string) $metric['ordered'], 4);
+            $received = bcadd($received, (string) $metric['received'], 4);
+        }
+
+        $payableTotal = '0';
+        $payablePaid = '0';
+        foreach ($this->allPayablesForPurchaseOrder as $payable) {
+            $payableTotal = bcadd($payableTotal, (string) $payable->total_amount, 4);
+            $payablePaid = bcadd($payablePaid, (string) $payable->amount_paid, 4);
+        }
+
+        $remaining = bcsub($ordered, $received, 4);
+        $payableOpen = bcsub($payableTotal, $payablePaid, 4);
+
+        return [
+            'ordered' => $ordered,
+            'received' => $received,
+            'remaining' => $remaining,
+            'progress' => bccomp($ordered, '0', 4) === 1
+                ? max(0.0, min(100.0, ((float) $received / (float) $ordered) * 100))
+                : 0.0,
+            'payable_total' => $payableTotal,
+            'payable_paid' => $payablePaid,
+            'payable_open' => $payableOpen,
+        ];
+    }
+
+    public function prepareCloseModal(): void
+    {
+        Gate::authorize('update', $this->purchaseOrder);
+        $this->close_reason = '';
+    }
+
+    public function closePurchaseOrder(ClosePurchaseOrderService $service): void
+    {
+        Gate::authorize('update', $this->purchaseOrder);
+
+        if (! in_array($this->purchaseOrder->status, [PurchaseOrderStatus::Confirmed, PurchaseOrderStatus::PartiallyReceived], true)) {
+            Flux::toast(variant: 'danger', text: __('Only open purchase orders can be closed.'));
+
+            return;
+        }
+
+        $validated = Validator::make(
+            ['close_reason' => $this->close_reason],
+            (new ClosePurchaseOrderRequest)->rules()
+        )->validate();
+
+        try {
+            $this->purchaseOrder = $service->execute(
+                (int) session('current_tenant_id'),
+                (int) $this->purchaseOrder->id,
+                (int) auth()->id(),
+                (string) $validated['close_reason'],
+            );
+            $this->modal('close-po')->close();
+            Flux::toast(variant: 'success', text: __('Purchase order closed. Remaining quantities were cancelled.'));
+        } catch (\InvalidArgumentException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+        }
     }
 
     public function recordPurchaseOrderPayment(RecordSupplierPaymentService $service): void
@@ -136,79 +249,260 @@ class extends Component {
     }
 }; ?>
 
-<div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-            <flux:heading size="xl">{{ __('Purchase order #:id', ['id' => $purchaseOrder->id]) }}</flux:heading>
-            <flux:text class="mt-1">
-                {{ $purchaseOrder->supplier->name }} · {{ $purchaseOrder->order_date->format('Y-m-d') }}
-                · {{ ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}
-            </flux:text>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-            @if (Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isNotEmpty())
-                <flux:modal.trigger name="add-po-payment">
-                    <flux:button wire:click="preparePaymentModal" variant="primary">{{ __('Add payment') }}</flux:button>
-                </flux:modal.trigger>
-            @endif
-            @if (! in_array($purchaseOrder->status, [PurchaseOrderStatus::Cancelled, PurchaseOrderStatus::Received], true))
-                <flux:button
-                    :variant="Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isNotEmpty() ? 'ghost' : 'primary'"
-                    :href="route('procurement.purchase-orders.receive', $purchaseOrder)"
-                    wire:navigate
-                >{{ __('Receive goods') }}</flux:button>
-            @endif
-            <flux:button :href="route('procurement.purchase-orders.index')" variant="ghost" wire:navigate>{{ __('Back') }}</flux:button>
+<div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
+    <div class="rounded-2xl border border-zinc-200 bg-linear-to-br from-white to-zinc-50 p-6 shadow-sm dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-900">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-2">
+                <flux:heading size="xl">{{ $purchaseOrder->reference_code }}</flux:heading>
+                <flux:text class="text-zinc-600 dark:text-zinc-400">
+                    {{ $purchaseOrder->supplier->name }} · {{ __('Order date: :date', ['date' => $purchaseOrder->order_date->format('Y-m-d')]) }} · {{ __('Internal ID #:id', ['id' => $purchaseOrder->id]) }}
+                </flux:text>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <flux:badge :color="$purchaseOrder->status === PurchaseOrderStatus::Received ? 'emerald' : ($purchaseOrder->status === PurchaseOrderStatus::Cancelled ? 'rose' : ($purchaseOrder->status === PurchaseOrderStatus::PartiallyReceived ? 'amber' : 'sky'))">
+                        {{ ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}
+                    </flux:badge>
+                    <flux:badge color="zinc">{{ __(':count line items', ['count' => $purchaseOrder->lines->count()]) }}</flux:badge>
+                    <flux:badge color="zinc">{{ __(':count receipts', ['count' => $purchaseOrder->goodsReceipts->count()]) }}</flux:badge>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if (Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isNotEmpty())
+                    <flux:modal.trigger name="add-po-payment">
+                        <flux:button wire:click="preparePaymentModal" variant="primary">{{ __('Add payment') }}</flux:button>
+                    </flux:modal.trigger>
+                @endif
+                @if (! in_array($purchaseOrder->status, [PurchaseOrderStatus::Cancelled, PurchaseOrderStatus::Received], true))
+                    <flux:button
+                        :variant="Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isNotEmpty() ? 'ghost' : 'primary'"
+                        :href="route('procurement.purchase-orders.receive', $purchaseOrder)"
+                        wire:navigate
+                    >{{ __('Receive goods') }}</flux:button>
+                @endif
+                @if (Gate::allows('update', $purchaseOrder) && in_array($purchaseOrder->status, [PurchaseOrderStatus::Confirmed, PurchaseOrderStatus::PartiallyReceived], true))
+                    <flux:modal.trigger name="close-po">
+                        <flux:button wire:click="prepareCloseModal" variant="danger">{{ __('Close PO') }}</flux:button>
+                    </flux:modal.trigger>
+                @endif
+                <flux:button :href="route('procurement.purchase-orders.index')" variant="ghost" wire:navigate>{{ __('Back') }}</flux:button>
+            </div>
         </div>
     </div>
 
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <flux:card class="space-y-1 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="text-xs uppercase tracking-wide text-zinc-500">{{ __('Receiving progress') }}</flux:text>
+            <flux:heading size="lg">{{ \Illuminate\Support\Number::format($this->summary['progress'], maxPrecision: 1) }}%</flux:heading>
+            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                {{ __('Received :r of :o units', [
+                    'r' => \Illuminate\Support\Number::format((float) $this->summary['received'], maxPrecision: 4),
+                    'o' => \Illuminate\Support\Number::format((float) $this->summary['ordered'], maxPrecision: 4),
+                ]) }}
+            </flux:text>
+        </flux:card>
+        <flux:card class="space-y-1 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="text-xs uppercase tracking-wide text-zinc-500">{{ __('Open quantity') }}</flux:text>
+            <flux:heading size="lg">{{ \Illuminate\Support\Number::format((float) $this->summary['remaining'], maxPrecision: 4) }}</flux:heading>
+            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('Pending units to receive') }}</flux:text>
+        </flux:card>
+        <flux:card class="space-y-1 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="text-xs uppercase tracking-wide text-zinc-500">{{ __('Payable total') }}</flux:text>
+            <flux:heading size="lg">{{ \Illuminate\Support\Number::format((float) $this->summary['payable_total'], maxPrecision: 2) }}</flux:heading>
+            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('Posted liabilities from receipts') }}</flux:text>
+        </flux:card>
+        <flux:card class="space-y-1 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="text-xs uppercase tracking-wide text-zinc-500">{{ __('Outstanding payable') }}</flux:text>
+            <flux:heading size="lg">{{ \Illuminate\Support\Number::format((float) $this->summary['payable_open'], maxPrecision: 2) }}</flux:heading>
+            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('Still unpaid on this order') }}</flux:text>
+        </flux:card>
+    </div>
+
+    @if ($purchaseOrder->status === PurchaseOrderStatus::Cancelled && $purchaseOrder->close_reason)
+        <flux:callout
+            color="rose"
+            icon="x-circle"
+            :heading="__('Purchase order closed')"
+            :text="__('Closed on :date by :user. Reason: :reason', [
+                'date' => optional($purchaseOrder->closed_at)?->format('Y-m-d H:i') ?? '—',
+                'user' => $purchaseOrder->closedByUser?->name ?? __('Unknown user'),
+                'reason' => $purchaseOrder->close_reason,
+            ])"
+        />
+    @endif
+
     @if (Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isEmpty() && $purchaseOrder->goodsReceipts->isNotEmpty())
-        <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
-            {{ __('There are no open payables for this order. If liabilities were not posted yet, record them from accounting after receiving goods.') }}
-        </flux:text>
+        <flux:callout
+            color="zinc"
+            icon="information-circle"
+            :heading="__('No open payables currently')"
+            :text="__('Liabilities are either fully paid or not posted yet. Post accounts payable entries after receipts if needed.')"
+        />
     @elseif (Gate::allows('create', SupplierPayment::class) && $purchaseOrder->goodsReceipts->isEmpty())
-        <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
-            {{ __('Receive goods and post accounts payable before you can allocate a payment to this order.') }}
-        </flux:text>
+        <flux:callout
+            color="zinc"
+            icon="information-circle"
+            :heading="__('Payment allocation is not available yet')"
+            :text="__('Receive goods first, then post accounts payable to allocate payments against this order.')"
+        />
     @endif
 
     @if ($purchaseOrder->notes)
         <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="mb-1 text-xs uppercase tracking-wide text-zinc-500">{{ __('Order notes') }}</flux:text>
             <flux:text>{{ $purchaseOrder->notes }}</flux:text>
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
-            <flux:heading size="lg">{{ __('Lines') }}</flux:heading>
+    <div class="grid gap-6 xl:grid-cols-3">
+        <div class="space-y-6 xl:col-span-2">
+            <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
+                    <flux:heading size="lg">{{ __('Line fulfillment') }}</flux:heading>
+                    <flux:text class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ __('Track ordered, received, and outstanding quantities per product.') }}</flux:text>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead class="bg-zinc-50 dark:bg-zinc-800/50">
+                            <tr>
+                                <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Product') }}</th>
+                                <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Ordered') }}</th>
+                                <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Received') }}</th>
+                                <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Remaining') }}</th>
+                                <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Progress') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                            @foreach ($this->lineMetrics as $metric)
+                                @php
+                                    $line = $metric['line'];
+                                    $completion = (float) $metric['completion_percentage'];
+                                @endphp
+                                <tr wire:key="pol-{{ $line->id }}">
+                                    <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $line->product->name }}</td>
+                                    <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $metric['ordered'], maxPrecision: 4) }}</td>
+                                    <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $metric['received'], maxPrecision: 4) }}</td>
+                                    <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $metric['remaining'], maxPrecision: 4) }}</td>
+                                    <td class="px-6 py-3 text-end">
+                                        <span class="inline-flex min-w-20 justify-end rounded-full px-2 py-1 text-xs font-medium {{ $completion >= 100 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : ($completion > 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                                            {{ \Illuminate\Support\Number::format($completion, maxPrecision: 1) }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
+                    <flux:heading size="lg">{{ __('Receipt history') }}</flux:heading>
+                    <flux:text class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ __('Operational trail of goods received against this purchase order.') }}</flux:text>
+                </div>
+                @if ($purchaseOrder->goodsReceipts->isEmpty())
+                    <div class="p-6">
+                        <flux:callout icon="archive-box" color="zinc" inline :heading="__('No receipts posted yet')" :text="__('Post the first receipt to start inventory and liability tracking for this order.')" />
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                            <thead class="bg-zinc-50 dark:bg-zinc-800/50">
+                                <tr>
+                                    <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Receipt') }}</th>
+                                    <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Received at') }}</th>
+                                    <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Qty') }}</th>
+                                    <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Payable total') }}</th>
+                                    <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Open amount') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                                @foreach ($purchaseOrder->goodsReceipts->sortByDesc('received_at') as $receipt)
+                                    @php
+                                        $receiptQty = $receipt->lines->reduce(
+                                            fn (string $carry, $line) => bcadd($carry, (string) $line->quantity_received, 4),
+                                            '0'
+                                        );
+                                        $payable = $receipt->accountsPayable;
+                                        $receiptOpen = $payable
+                                            ? OpenItemStatusResolver::remaining((string) $payable->total_amount, (string) $payable->amount_paid)
+                                            : '0';
+                                    @endphp
+                                    <tr wire:key="gr-{{ $receipt->id }}">
+                                        <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">#{{ $receipt->id }}</td>
+                                        <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $receipt->received_at->format('Y-m-d H:i') }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $receiptQty, maxPrecision: 4) }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ \Illuminate\Support\Number::format((float) ($payable?->total_amount ?? 0), maxPrecision: 2) }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $receiptOpen, maxPrecision: 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 dark:bg-zinc-800/50">
-                    <tr>
-                        <th class="px-6 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Product') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Ordered') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Received') }}</th>
-                        <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Remaining') }}</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                    @foreach ($purchaseOrder->lines as $line)
-                        @php
-                            $received = $line->totalReceivedQuantity();
-                            $remaining = bcsub((string) $line->quantity_ordered, $received, 4);
-                        @endphp
-                        <tr wire:key="pol-{{ $line->id }}">
-                            <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $line->product->name }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $line->quantity_ordered, maxPrecision: 4) }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $received, maxPrecision: 4) }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $remaining, maxPrecision: 4) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+
+        <div class="space-y-6">
+            <flux:card class="space-y-3 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Financial snapshot') }}</flux:heading>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-zinc-600 dark:text-zinc-400">{{ __('Payable total') }}</span>
+                        <span class="tabular-nums font-medium">{{ \Illuminate\Support\Number::format((float) $this->summary['payable_total'], maxPrecision: 2) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-zinc-600 dark:text-zinc-400">{{ __('Paid') }}</span>
+                        <span class="tabular-nums font-medium">{{ \Illuminate\Support\Number::format((float) $this->summary['payable_paid'], maxPrecision: 2) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-zinc-200 pt-2 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">{{ __('Open amount') }}</span>
+                        <span class="tabular-nums font-semibold">{{ \Illuminate\Support\Number::format((float) $this->summary['payable_open'], maxPrecision: 2) }}</span>
+                    </div>
+                </div>
+            </flux:card>
+
+            <flux:card class="space-y-2 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Operational status') }}</flux:heading>
+                <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                    {{ __('Use close PO only when remaining quantities should no longer be expected from the supplier.') }}
+                </flux:text>
+                <div class="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                    <div>{{ __('Current status: :status', ['status' => ucfirst(str_replace('_', ' ', $purchaseOrder->status->value))]) }}</div>
+                    <div>{{ __('Receipts posted: :count', ['count' => $purchaseOrder->goodsReceipts->count()]) }}</div>
+                    <div>{{ __('Open payables: :count', ['count' => $this->openPayablesForPurchaseOrder->count()]) }}</div>
+                </div>
+            </flux:card>
         </div>
     </div>
+
+    @if (Gate::allows('update', $purchaseOrder) && in_array($purchaseOrder->status, [PurchaseOrderStatus::Confirmed, PurchaseOrderStatus::PartiallyReceived], true))
+        <flux:modal name="close-po" class="max-w-lg">
+            <div class="space-y-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Close purchase order') }}</flux:heading>
+                    <flux:text class="mt-1">
+                        {{ __('Closing will cancel all remaining unreceived quantities and lock this PO from further receiving.') }}
+                    </flux:text>
+                </div>
+
+                <form wire:submit="closePurchaseOrder" class="space-y-4">
+                    <flux:textarea
+                        wire:model="close_reason"
+                        :label="__('Reason for closure')"
+                        rows="3"
+                        required
+                        :placeholder="__('Example: Supplier discontinued remaining items and approved cancellation.')"
+                    />
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button variant="danger" type="submit">{{ __('Close purchase order') }}</flux:button>
+                    </div>
+                </form>
+            </div>
+        </flux:modal>
+    @endif
 
     @if (Gate::allows('create', SupplierPayment::class) && $this->openPayablesForPurchaseOrder->isNotEmpty())
         <flux:modal name="add-po-payment" class="max-w-lg">

@@ -88,7 +88,7 @@ class extends Component {
 
 <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
     <div>
-        <flux:heading size="xl">{{ __('Receive against PO #:id', ['id' => $purchaseOrder->id]) }}</flux:heading>
+        <flux:heading size="xl">{{ __('Receive against :reference', ['reference' => $purchaseOrder->reference_code]) }}</flux:heading>
         <flux:text class="mt-1">{{ __('Quantities post as receipt-type inventory movements in the same transaction as this document.') }}</flux:text>
     </div>
 

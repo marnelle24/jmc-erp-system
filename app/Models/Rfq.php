@@ -21,6 +21,8 @@ class Rfq extends Model
         'notes',
         'created_by',
         'approved_by',
+        'sent_by',
+        'sent_at',
     ];
 
     /**
@@ -30,6 +32,7 @@ class Rfq extends Model
     {
         return [
             'status' => RfqStatus::class,
+            'sent_at' => 'datetime',
         ];
     }
 
@@ -63,6 +66,14 @@ class Rfq extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sent_by');
     }
 
     /**
