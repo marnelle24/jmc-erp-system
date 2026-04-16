@@ -104,7 +104,7 @@ class extends Component {
             @if ($rfq->status === RfqStatus::ApprovedNoPo && $rfq->purchaseOrders->isEmpty())
                 <flux:button type="button" variant="outline" wire:click="markAsSent">{{ __('Mark as sent') }}</flux:button>
             @endif
-            @if (in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo, RfqStatus::Sent], true) && $rfq->purchaseOrders->isEmpty())
+            @if (in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo], true) && $rfq->purchaseOrders->isEmpty())
                 <flux:button :href="route('procurement.rfqs.edit', $rfq)" variant="outline" wire:navigate>{{ __('Edit') }}</flux:button>
             @endif
             @if (in_array($rfq->status, [RfqStatus::ApprovedNoPo, RfqStatus::Sent], true) && $rfq->purchaseOrders->isEmpty())
@@ -222,7 +222,8 @@ class extends Component {
             <flux:text class="mt-1 text-sm">{{ __('Downstream commitments generated from this RFQ.') }}</flux:text>
             <div class="mt-4 flex flex-wrap gap-2">
                 @foreach ($rfq->purchaseOrders as $po)
-                    <flux:button :href="route('procurement.purchase-orders.show', $po)" wire:navigate variant="ghost" size="sm" class="border border-zinc-200 dark:border-white/30">
+                    <flux:button :href="route('procurement.purchase-orders.show', $po)" wire:navigate variant="primary" size="sm" class="cursor-pointer border border-zinc-200 dark:border-white/30">
+                        <flux:icon name="eye" class="size-4" />
                         {{ $po->reference_code }}
                     </flux:button>
                 @endforeach

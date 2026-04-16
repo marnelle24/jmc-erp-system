@@ -24,11 +24,6 @@ class UpdateRfqRequest extends FormRequest
         $tenantId = (int) session('current_tenant_id');
 
         return [
-            'supplier_id' => [
-                'required',
-                'integer',
-                Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)),
-            ],
             'title' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:65535'],
             'lines' => ['required', 'array', 'min:1'],

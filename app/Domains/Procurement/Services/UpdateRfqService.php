@@ -10,7 +10,7 @@ use InvalidArgumentException;
 class UpdateRfqService
 {
     /**
-     * @param  array{supplier_id: int, title?: string|null, notes?: string|null, lines: list<array{product_id: int, quantity: string, unit_type: string, unit_price?: string|null, notes?: string|null}>}  $data
+     * @param  array{title?: string|null, notes?: string|null, lines: list<array{product_id: int, quantity: string, unit_type: string, unit_price?: string|null, notes?: string|null}>}  $data
      */
     public function execute(Rfq $rfq, array $data): Rfq
     {
@@ -18,13 +18,12 @@ class UpdateRfqService
             throw new InvalidArgumentException(__('This RFQ can no longer be edited.'));
         }
 
-        if (! in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo, RfqStatus::Sent], true)) {
+        if (! in_array($rfq->status, [RfqStatus::PendingForApproval, RfqStatus::ApprovedNoPo], true)) {
             throw new InvalidArgumentException(__('This RFQ cannot be edited in its current state.'));
         }
 
         return DB::transaction(function () use ($rfq, $data): Rfq {
             $rfq->update([
-                'supplier_id' => $data['supplier_id'],
                 'title' => $data['title'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ]);
