@@ -26,6 +26,7 @@ class StoreGoodsReceiptRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.purchase_order_line_id' => ['required', 'integer'],
             'lines.*.quantity_received' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

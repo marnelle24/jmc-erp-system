@@ -3,8 +3,11 @@
 namespace App\Domains\Procurement\Services;
 
 use App\Enums\PurchaseOrderStatus;
+use App\Enums\RfqStatus;
 use App\Models\PurchaseOrder;
+use App\Models\Rfq;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class CreatePurchaseOrderService
 {
@@ -18,6 +21,31 @@ class CreatePurchaseOrderService
     public function execute(int $tenantId, array $data): PurchaseOrder
     {
         return DB::transaction(function () use ($tenantId, $data): PurchaseOrder {
+            $rfq = null;
+            if (! empty($data['rfq_id'])) {
+                $rfq = Rfq::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereKey((int) $data['rfq_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($rfq->purchaseOrders()->exists()) {
+                    throw new InvalidArgumentException(__('A purchase order already exists for this RFQ.'));
+                }
+
+                if ($rfq->status === RfqStatus::PendingForApproval) {
+                    throw new InvalidArgumentException(__('Approve this RFQ before creating a purchase order.'));
+                }
+
+                if ($rfq->status === RfqStatus::Closed) {
+                    throw new InvalidArgumentException(__('This request for quotation is closed.'));
+                }
+
+                if ((int) $data['supplier_id'] !== (int) $rfq->supplier_id) {
+                    throw new InvalidArgumentException(__('Supplier must match the RFQ supplier.'));
+                }
+            }
+
             $referenceCode = $this->referenceCodes->next($tenantId);
 
             $po = PurchaseOrder::query()->create([
@@ -32,7 +60,7 @@ class CreatePurchaseOrderService
 
             foreach ($data['lines'] as $index => $line) {
                 $po->lines()->create([
-                    'rfq_line_id' => isset($line['rfq_line_id']) ? (int) $line['rfq_line_id'] : null,
+                    'rfq_line_id' => ! empty($line['rfq_line_id']) ? (int) $line['rfq_line_id'] : null,
                     'product_id' => $line['product_id'],
                     'quantity_ordered' => (string) $line['quantity_ordered'],
                     'unit_cost' => isset($line['unit_cost']) && $line['unit_cost'] !== '' && $line['unit_cost'] !== null
@@ -40,6 +68,10 @@ class CreatePurchaseOrderService
                         : null,
                     'position' => $index,
                 ]);
+            }
+
+            if ($rfq !== null) {
+                $rfq->update(['status' => RfqStatus::Closed]);
             }
 
             return $po->load('lines');

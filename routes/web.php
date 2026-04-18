@@ -23,7 +23,6 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::livewire('procurement/purchase-orders', 'pages::procurement.purchase-orders.index')->name('procurement.purchase-orders.index');
     Route::livewire('procurement/purchase-orders/create', 'pages::procurement.purchase-orders.create')->name('procurement.purchase-orders.create');
     Route::livewire('procurement/purchase-orders/{id}', 'pages::procurement.purchase-orders.show')->name('procurement.purchase-orders.show');
-    Route::livewire('procurement/purchase-orders/{id}/receive', 'pages::procurement.purchase-orders.receive')->name('procurement.purchase-orders.receive');
 
     Route::livewire('customers', 'pages::customers.index')->name('customers.index');
 

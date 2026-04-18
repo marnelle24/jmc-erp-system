@@ -15,6 +15,7 @@ class GoodsReceiptLine extends Model
         'goods_receipt_id',
         'purchase_order_line_id',
         'quantity_received',
+        'unit_cost',
     ];
 
     /**
@@ -24,6 +25,7 @@ class GoodsReceiptLine extends Model
     {
         return [
             'quantity_received' => 'decimal:4',
+            'unit_cost' => 'decimal:4',
         ];
     }
 

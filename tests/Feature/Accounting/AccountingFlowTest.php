@@ -31,6 +31,7 @@ class AccountingFlowTest extends TestCase
         $po = PurchaseOrder::query()->create([
             'tenant_id' => $tenant->id,
             'supplier_id' => $supplier->id,
+            'reference_code' => 'PO-AP-001',
             'rfq_id' => null,
             'status' => PurchaseOrderStatus::Confirmed,
             'order_date' => now()->toDateString(),

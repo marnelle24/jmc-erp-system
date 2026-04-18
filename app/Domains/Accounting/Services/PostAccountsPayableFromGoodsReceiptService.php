@@ -33,7 +33,9 @@ class PostAccountsPayableFromGoodsReceiptService
         /** @var GoodsReceiptLine $line */
         foreach ($receipt->lines as $line) {
             $poLine = $line->purchaseOrderLine;
-            $unitCost = $poLine->unit_cost !== null ? (string) $poLine->unit_cost : '0';
+            $unitCost = $line->unit_cost !== null
+                ? (string) $line->unit_cost
+                : ($poLine->unit_cost !== null ? (string) $poLine->unit_cost : '0');
             $lineTotal = bcmul((string) $line->quantity_received, $unitCost, 4);
             $total = bcadd($total, $lineTotal, 4);
         }

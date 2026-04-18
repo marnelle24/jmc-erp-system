@@ -23,7 +23,7 @@ class PostGoodsReceiptService
     ) {}
 
     /**
-     * @param  list<array{purchase_order_line_id: int, quantity_received: string}>  $lines
+     * @param  list<array{purchase_order_line_id: int, quantity_received: string, unit_cost?: string|null}>  $lines
      */
     public function execute(
         int $tenantId,
@@ -44,7 +44,7 @@ class PostGoodsReceiptService
                 throw new InvalidArgumentException(__('Cannot receive against a cancelled purchase order.'));
             }
 
-            $normalized = $this->normalizeLines($lines);
+            $normalized = $this->normalizeLines($purchaseOrder, $lines);
             if ($normalized === []) {
                 throw new InvalidArgumentException(__('Enter at least one positive quantity to receive.'));
             }
@@ -64,7 +64,10 @@ class PostGoodsReceiptService
                 'notes' => $notes,
             ]);
 
-            foreach ($normalized as $purchaseOrderLineId => $quantityReceived) {
+            foreach ($normalized as $purchaseOrderLineId => $row) {
+                $quantityReceived = $row['quantity'];
+                $unitCostForLine = $row['unit_cost'];
+
                 $poLine = $purchaseOrder->lines->firstWhere('id', $purchaseOrderLineId);
                 if (! $poLine instanceof PurchaseOrderLine) {
                     continue;
@@ -84,6 +87,7 @@ class PostGoodsReceiptService
                     'goods_receipt_id' => $goodsReceipt->id,
                     'purchase_order_line_id' => $purchaseOrderLineId,
                     'quantity_received' => $quantityReceived,
+                    'unit_cost' => $unitCostForLine,
                 ]);
 
                 $receiptLine->load('purchaseOrderLine.product');
@@ -102,22 +106,30 @@ class PostGoodsReceiptService
                 );
             }
 
+            foreach (array_keys($normalized) as $purchaseOrderLineId) {
+                $this->recalculatePurchaseOrderLineUnitCost((int) $purchaseOrderLineId);
+            }
+
             $purchaseOrder->refresh()->load('lines');
             $purchaseOrder->update([
                 'status' => $this->resolvePurchaseOrderStatus($purchaseOrder),
             ]);
 
-            $this->syncRfqLineUnitPricesFromPurchaseOrder($purchaseOrder, $normalized);
+            $normalizedQtyByLine = array_map(
+                static fn (array $r): string => $r['quantity'],
+                $normalized,
+            );
+            $this->syncRfqLineUnitPricesFromPurchaseOrder($purchaseOrder, $normalizedQtyByLine);
 
             return $goodsReceipt->load('lines');
         });
     }
 
     /**
-     * @param  list<array{purchase_order_line_id: int, quantity_received: string}>  $lines
-     * @return array<int, string> keyed by purchase_order_line_id
+     * @param  list<array{purchase_order_line_id: int, quantity_received: string, unit_cost?: string|null}>  $lines
+     * @return array<int, array{quantity: string, unit_cost: string}>
      */
-    private function normalizeLines(array $lines): array
+    private function normalizeLines(PurchaseOrder $purchaseOrder, array $lines): array
     {
         $out = [];
         foreach ($lines as $row) {
@@ -129,10 +141,59 @@ class PostGoodsReceiptService
             if ($lineId < 1) {
                 continue;
             }
-            $out[$lineId] = isset($out[$lineId]) ? bcadd($out[$lineId], $qty, 4) : $qty;
+            $poLine = $purchaseOrder->lines->firstWhere('id', $lineId);
+            if (! $poLine instanceof PurchaseOrderLine) {
+                continue;
+            }
+
+            $rawPrice = $row['unit_cost'] ?? '';
+            $unitCost = ($rawPrice !== null && $rawPrice !== '')
+                ? (string) $rawPrice
+                : (string) ($poLine->unit_cost ?? '0');
+            if (bccomp($unitCost, '0', 4) === -1) {
+                $unitCost = '0';
+            }
+
+            if (isset($out[$lineId])) {
+                $mergedQty = bcadd($out[$lineId]['quantity'], $qty, 4);
+                $out[$lineId] = ['quantity' => $mergedQty, 'unit_cost' => $unitCost];
+            } else {
+                $out[$lineId] = ['quantity' => $qty, 'unit_cost' => $unitCost];
+            }
         }
 
         return $out;
+    }
+
+    private function recalculatePurchaseOrderLineUnitCost(int $purchaseOrderLineId): void
+    {
+        $poLine = PurchaseOrderLine::query()->whereKey($purchaseOrderLineId)->first();
+        if ($poLine === null) {
+            return;
+        }
+
+        $grLines = GoodsReceiptLine::query()
+            ->where('purchase_order_line_id', $purchaseOrderLineId)
+            ->whereHas('goodsReceipt', fn ($q) => $q->where('status', GoodsReceiptStatus::Posted))
+            ->get();
+
+        $totalQty = '0';
+        $totalCost = '0';
+        foreach ($grLines as $grl) {
+            $q = (string) $grl->quantity_received;
+            $uc = $grl->unit_cost !== null
+                ? (string) $grl->unit_cost
+                : (string) ($poLine->unit_cost ?? '0');
+            $totalQty = bcadd($totalQty, $q, 4);
+            $totalCost = bcadd($totalCost, bcmul($q, $uc, 4), 4);
+        }
+
+        if (bccomp($totalQty, '0', 4) !== 1) {
+            return;
+        }
+
+        $avg = bcdiv($totalCost, $totalQty, 4);
+        $poLine->update(['unit_cost' => $avg]);
     }
 
     /**
@@ -162,15 +223,15 @@ class PostGoodsReceiptService
      * When the PO was created from an RFQ, copy the PO line unit cost (actual / booked cost) onto the linked RFQ line
      * after receipt so estimated unit price reflects post-receipt data.
      *
-     * @param  array<int, string>  $normalized  keyed by purchase_order_line_id
+     * @param  array<int, string>  $receivedLineIds  keyed by purchase_order_line_id (values unused; receipt keys only)
      */
-    private function syncRfqLineUnitPricesFromPurchaseOrder(PurchaseOrder $purchaseOrder, array $normalized): void
+    private function syncRfqLineUnitPricesFromPurchaseOrder(PurchaseOrder $purchaseOrder, array $receivedLineIds): void
     {
         if ($purchaseOrder->rfq_id === null) {
             return;
         }
 
-        foreach (array_keys($normalized) as $purchaseOrderLineId) {
+        foreach (array_keys($receivedLineIds) as $purchaseOrderLineId) {
             $poLine = PurchaseOrderLine::query()
                 ->whereKey($purchaseOrderLineId)
                 ->where('purchase_order_id', $purchaseOrder->id)

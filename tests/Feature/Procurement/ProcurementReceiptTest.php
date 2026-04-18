@@ -30,6 +30,7 @@ class ProcurementReceiptTest extends TestCase
         $po = PurchaseOrder::query()->create([
             'tenant_id' => $tenant->id,
             'supplier_id' => $supplier->id,
+            'reference_code' => 'PO-TEST-001',
             'rfq_id' => null,
             'status' => PurchaseOrderStatus::Confirmed,
             'order_date' => now()->toDateString(),
@@ -67,6 +68,7 @@ class ProcurementReceiptTest extends TestCase
         ]);
 
         $grLine = GoodsReceiptLine::query()->where('goods_receipt_id', $receipt->id)->firstOrFail();
+        $this->assertSame('1.0000', (string) $grLine->unit_cost);
 
         $this->assertDatabaseHas('inventory_movements', [
             'tenant_id' => $tenant->id,
