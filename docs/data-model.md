@@ -4,7 +4,7 @@ This section describes **directional** entities for the JMC ERP domain. Physical
 
 ## Tenancy
 
-- **`tenants`** holds one row per organization (business) on the platform.
+- **`tenants`** holds one row per organization (business) on the platform; includes **`base_currency`** (ISO 4217, default `USD`) for tenant-scoped money display.
 - **`tenant_user`** links users to tenants with a **role** (for example `owner`); a user can exist before they belong to any tenant (sign up without an organization).
 - After sign-in, the app requires at least one membership before tenant-scoped ERP routes; **current tenant** is tracked in session (`current_tenant_id`).
 - All tenant-owned business tables include **`tenant_id`** (foreign key to `tenants`).
@@ -36,7 +36,7 @@ On-hand quantity for a product is the **sum** of `inventory_movements.quantity` 
 
 ### Physical columns (procurement)
 
-- **`suppliers`:** `tenant_id`, `name`, optional `email`, `phone`, `address`.
+- **`suppliers`:** `tenant_id`, `name`, optional unique-per-tenant `code`, `status` (`active`, `on_hold`, `blocked`), optional `email`, `phone`, `address`, optional `payment_terms`, `tax_id`, `notes`.
 - **`rfqs`:** `tenant_id`, `supplier_id`, `status` (`pending_for_approval`, `sent`, `closed`), optional `title`, `notes`.
 - **`rfq_lines`:** `rfq_id`, `product_id`, `quantity`, optional `unit_price`, optional line `notes`.
 - **`purchase_orders`:** `tenant_id`, `supplier_id`, optional `rfq_id`, `status` (`confirmed`, `partially_received`, `received`, `cancelled`), `order_date`, optional `notes`.

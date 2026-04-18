@@ -12,6 +12,7 @@ use App\Models\AccountsPayable;
 use App\Models\GoodsReceipt;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierPayment;
+use App\Support\TenantMoney;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Collection;
@@ -384,9 +385,9 @@ class extends Component {
                                     <tr wire:key="gr-{{ $receipt->id }}">
                                         <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $receipt->received_at->translatedFormat('F j, Y - h:i A') }}</td>
                                         <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $receiptQty, maxPrecision: 4) }}</td>
-                                        <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $this->receiptWeightedAverageUnitCost($receipt), maxPrecision: 4) }}</td>
-                                        <td class="px-6 py-3 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ \Illuminate\Support\Number::format((float) ($payable?->total_amount ?? 0), maxPrecision: 2) }}</td>
-                                        <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $receiptOpen, maxPrecision: 2) }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $this->receiptWeightedAverageUnitCost($receipt), null, 4) }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ TenantMoney::format((float) ($payable?->total_amount ?? 0), null, 2) }}</td>
+                                        <td class="px-6 py-3 text-end tabular-nums">{{ TenantMoney::format((float) $receiptOpen, null, 2) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -517,7 +518,7 @@ class extends Component {
                                         @endphp
                                         <tr wire:key="po-pay-ap-{{ $ap->id }}">
                                             <td class="px-4 py-2 font-medium text-zinc-900 dark:text-zinc-100">#{{ $ap->id }}</td>
-                                            <td class="px-4 py-2 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $rem, maxPrecision: 4) }}</td>
+                                            <td class="px-4 py-2 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $rem, null, 4) }}</td>
                                             <td class="px-4 py-2 text-end">
                                                 <flux:input
                                                     class="max-w-40 ms-auto"

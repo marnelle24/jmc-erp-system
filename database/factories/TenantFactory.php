@@ -23,6 +23,7 @@ class TenantFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
+            'base_currency' => 'USD',
         ];
     }
 }

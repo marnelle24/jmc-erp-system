@@ -34,6 +34,18 @@ class extends Component {
         $this->lines = [
             ['product_id' => '', 'quantity_ordered' => '', 'unit_cost' => '', 'rfq_line_id' => ''],
         ];
+
+        $prefill = request()->query('supplier_id');
+        if ($prefill !== null && $prefill !== '') {
+            $tenantId = (int) session('current_tenant_id');
+            $exists = Supplier::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $prefill)
+                ->exists();
+            if ($exists) {
+                $this->supplier_id = (string) (int) $prefill;
+            }
+        }
     }
 
     public function updatedRfqId(string $value): void

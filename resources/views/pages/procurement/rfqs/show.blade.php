@@ -6,6 +6,7 @@ use App\Domains\Procurement\Services\MarkRfqAsSentService;
 use App\Enums\RfqStatus;
 use App\Models\PurchaseOrder;
 use App\Models\Rfq;
+use App\Support\TenantMoney;
 use Flux\Flux;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -170,7 +171,7 @@ class extends Component {
                 <div>
                     <flux:text class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Estimated total') }}</flux:text>
                     <flux:heading size="lg" class="mt-1 tabular-nums">
-                        {{ \Illuminate\Support\Number::format($this->estimatedTotal, maxPrecision: 2) }}
+                        {{ TenantMoney::format($this->estimatedTotal, null, 2) }}
                     </flux:heading>
                 </div>
                 <div>
@@ -201,11 +202,11 @@ class extends Component {
                         <flux:table.cell align="end" class="px-6! tabular-nums">{{ \Illuminate\Support\Number::format((float) $line->quantity, maxPrecision: 4) }}</flux:table.cell>
                         <flux:table.cell class="px-6!">{{ $line->unit_type->label() }}</flux:table.cell>
                         <flux:table.cell align="end" class="px-6! tabular-nums">
-                            {{ $line->unit_price !== null ? \Illuminate\Support\Number::format((float) $line->unit_price, maxPrecision: 4) : '—' }}
+                            {{ $line->unit_price !== null ? TenantMoney::format((float) $line->unit_price, null, 4) : '—' }}
                         </flux:table.cell>
                         <flux:table.cell align="end" class="px-6! tabular-nums">
                             @if ($line->unit_price !== null)
-                                {{ \Illuminate\Support\Number::format((float) $line->quantity * (float) $line->unit_price, maxPrecision: 2) }}
+                                {{ TenantMoney::format((float) $line->quantity * (float) $line->unit_price, null, 2) }}
                             @else
                                 —
                             @endif

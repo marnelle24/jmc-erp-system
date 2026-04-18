@@ -29,6 +29,18 @@ class extends Component {
         $this->lines = [
             ['product_id' => '', 'quantity' => '', 'unit_type' => RfqLineUnitType::Piece->value, 'unit_price' => '', 'notes' => ''],
         ];
+
+        $prefill = request()->query('supplier_id');
+        if ($prefill !== null && $prefill !== '') {
+            $tenantId = (int) session('current_tenant_id');
+            $exists = Supplier::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $prefill)
+                ->exists();
+            if ($exists) {
+                $this->supplier_id = (string) (int) $prefill;
+            }
+        }
     }
 
     public function addLine(): void

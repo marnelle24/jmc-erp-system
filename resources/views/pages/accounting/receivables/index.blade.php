@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AccountsReceivable;
+use App\Support\TenantMoney;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -57,8 +58,8 @@ class extends Component {
                             <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">#{{ $row->id }}</td>
                             <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $row->customer->name }}</td>
                             <td class="px-6 py-3 text-zinc-600 dark:text-zinc-400">#{{ $row->sales_invoice_id }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $row->total_amount, maxPrecision: 4) }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $row->amount_paid, maxPrecision: 4) }}</td>
+                            <td class="px-6 py-3 text-end tabular-nums">{{ TenantMoney::format((float) $row->total_amount, null, 4) }}</td>
+                            <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $row->amount_paid, null, 4) }}</td>
                             <td class="px-6 py-3 capitalize text-zinc-700 dark:text-zinc-300">{{ $row->status->value }}</td>
                         </tr>
                     @empty

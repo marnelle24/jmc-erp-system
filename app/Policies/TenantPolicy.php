@@ -16,4 +16,9 @@ class TenantPolicy
     {
         return $user->tenants()->whereKey($tenant->getKey())->exists();
     }
+
+    public function update(User $user, Tenant $tenant): bool
+    {
+        return $user->tenants()->whereKey($tenant->getKey())->exists();
+    }
 }

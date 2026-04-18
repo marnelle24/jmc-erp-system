@@ -12,6 +12,10 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('settings/appearance', 'pages::settings.appearance')->name('appearance.edit');
 
+    Route::middleware(['tenant.context'])->group(function () {
+        Route::livewire('settings/organization', 'pages::settings.organization')->name('settings.organization');
+    });
+
     Route::livewire('settings/security', 'pages::settings.security')
         ->middleware(
             when(

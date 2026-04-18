@@ -19,6 +19,7 @@ class Tenant extends Model
     protected $fillable = [
         'name',
         'slug',
+        'base_currency',
     ];
 
     /**

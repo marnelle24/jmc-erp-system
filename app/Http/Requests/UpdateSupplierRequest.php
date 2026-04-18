@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Supplier;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,11 +20,8 @@ class UpdateSupplierRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:64'],
-            'address' => ['nullable', 'string', 'max:65535'],
-        ];
+        $supplier = $this->route('supplier');
+
+        return SupplierPayloadRules::rules($supplier instanceof Supplier ? $supplier->id : null);
     }
 }

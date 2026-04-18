@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCustomerPaymentRequest;
 use App\Models\AccountsReceivable;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
+use App\Support\TenantMoney;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\Gate;
@@ -171,7 +172,7 @@ class extends Component {
                                     @endphp
                                     <tr wire:key="alloc-ar-{{ $ar->id }}">
                                         <td class="px-4 py-2 font-medium text-zinc-900 dark:text-zinc-100">#{{ $ar->id }} ({{ __('inv.') }} #{{ $ar->sales_invoice_id }})</td>
-                                        <td class="px-4 py-2 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $rem, maxPrecision: 4) }}</td>
+                                        <td class="px-4 py-2 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $rem, null, 4) }}</td>
                                         <td class="px-4 py-2 text-end">
                                             <flux:input
                                                 class="max-w-[10rem] ms-auto"

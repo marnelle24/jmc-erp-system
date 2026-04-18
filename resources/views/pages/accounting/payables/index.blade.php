@@ -5,6 +5,7 @@ use App\Enums\GoodsReceiptStatus;
 use App\Http\Requests\PostAccountsPayableRequest;
 use App\Models\AccountsPayable;
 use App\Models\GoodsReceipt;
+use App\Support\TenantMoney;
 use Flux\Flux;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -137,8 +138,8 @@ class extends Component {
                         <tr wire:key="ap-{{ $payable->id }}">
                             <td class="px-6 py-3 font-medium text-zinc-900 dark:text-zinc-100">#{{ $payable->id }}</td>
                             <td class="px-6 py-3 text-zinc-700 dark:text-zinc-300">{{ $payable->supplier->name }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums">{{ \Illuminate\Support\Number::format((float) $payable->total_amount, maxPrecision: 4) }}</td>
-                            <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ \Illuminate\Support\Number::format((float) $payable->amount_paid, maxPrecision: 4) }}</td>
+                            <td class="px-6 py-3 text-end tabular-nums">{{ TenantMoney::format((float) $payable->total_amount, null, 4) }}</td>
+                            <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $payable->amount_paid, null, 4) }}</td>
                             <td class="px-6 py-3 capitalize text-zinc-700 dark:text-zinc-300">{{ $payable->status->value }}</td>
                         </tr>
                     @empty
