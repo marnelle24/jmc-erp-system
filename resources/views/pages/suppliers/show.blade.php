@@ -9,9 +9,11 @@ use App\Models\Rfq;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Support\TenantMoney;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new #[Layout('layouts::app', ['title' => 'Supplier'])]
@@ -19,6 +21,7 @@ new #[Layout('layouts::app', ['title' => 'Supplier'])]
 class extends Component {
     public Supplier $supplier;
 
+    #[Url(as: 'tab', history: true)]
     public string $tab = 'overview';
 
     /** @var array<string, mixed> */
@@ -35,11 +38,20 @@ class extends Component {
         Gate::authorize('view', $this->supplier);
 
         $this->metrics = $metricsService->execute($tenantId, $this->supplier);
+
+        $this->tab = $this->normalizeTab($this->tab);
     }
 
     public function setTab(string $tab): void
     {
-        $this->tab = $tab;
+        $this->tab = $this->normalizeTab($tab);
+    }
+
+    private function normalizeTab(string $tab): string
+    {
+        $allowed = ['overview', 'purchase_orders', 'rfqs', 'receipts_ap', 'payments'];
+
+        return in_array($tab, $allowed, true) ? $tab : 'overview';
     }
 
     /**
