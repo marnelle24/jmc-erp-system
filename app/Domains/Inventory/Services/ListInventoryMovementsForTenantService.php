@@ -18,7 +18,8 @@ class ListInventoryMovementsForTenantService
      *     movement_type?: string|null,
      *     product_search?: string|null,
      *     sort?: string|null,
-     *     direction?: string|null
+     *     direction?: string|null,
+     *     product_id?: int|null
      * }  $filters
      */
     public function query(int $tenantId, array $filters = []): Builder
@@ -34,6 +35,11 @@ class ListInventoryMovementsForTenantService
                     ]);
                 },
             ]);
+
+        $productId = isset($filters['product_id']) ? (int) $filters['product_id'] : 0;
+        if ($productId > 0) {
+            $q->where('inventory_movements.product_id', $productId);
+        }
 
         $dateFrom = isset($filters['date_from']) ? trim((string) $filters['date_from']) : '';
         if ($dateFrom !== '') {

@@ -146,16 +146,28 @@ class extends Component {
                                         <span class="tabular-nums">{{ number_format((float) ($product->inventory_movements_sum_quantity ?? 0), 2) }}</span>
                                     </flux:table.cell>
                                     <flux:table.cell align="end" class="px-6!">
-                                        <flux:button
-                                            type="button"
-                                            size="xs"
-                                            variant="ghost"
-                                            wire:click="startEdit({{ $product->id }})"
-                                            inset="top bottom"
-                                            class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
-                                        >
-                                            {{ __('Edit') }}
-                                        </flux:button>
+                                        <div class="flex items-center justify-end gap-1 text-right!">
+                                            <flux:button
+                                                :href="route('products.show', $product)"
+                                                size="xs"
+                                                variant="primary"
+                                                wire:navigate
+                                                inset="top bottom"
+                                                class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
+                                            >
+                                                {{ __('View') }}
+                                            </flux:button>
+                                            <flux:button
+                                                type="button"
+                                                size="xs"
+                                                variant="filled"
+                                                wire:click="startEdit({{ $product->id }})"
+                                                inset="top bottom"
+                                                class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
+                                            >
+                                                {{ __('Edit') }}
+                                            </flux:button>
+                                        </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach

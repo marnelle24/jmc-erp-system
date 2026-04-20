@@ -22,6 +22,8 @@ class UpdateProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
+            'reorder_point' => ['nullable', 'numeric', 'min:0'],
+            'reorder_qty' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

@@ -220,6 +220,7 @@ class extends Component {
                     <flux:table.column align="end" class="px-6!">{{ __('Quantity') }}</flux:table.column>
                     <flux:table.column class="min-w-48 px-6! flex justify-end">{{ __('Source') }}</flux:table.column>
                     <flux:table.column class="px-6!">{{ __('Notes') }}</flux:table.column>
+                    <flux:table.column class="px-6!">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @foreach ($this->movements as $movement)
@@ -263,6 +264,12 @@ class extends Component {
                             </flux:table.cell>
                             <flux:table.cell class="max-w-xs truncate px-6! text-zinc-600 dark:text-zinc-400">
                                 {{ $movement->notes ?? '—' }}
+                            </flux:table.cell>
+                            <flux:table.cell class="px-6!">
+                                <flux:button size="xs" variant="primary" wire:navigate :href="route('products.show', $movement->product->id)">
+                                    <flux:icon name="eye" class="w-4 h-4" />
+                                    {{ __('View product') }}
+                                </flux:button>
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach

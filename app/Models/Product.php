@@ -21,7 +21,20 @@ class Product extends Model
         'name',
         'sku',
         'description',
+        'reorder_point',
+        'reorder_qty',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'reorder_point' => 'decimal:4',
+            'reorder_qty' => 'decimal:4',
+        ];
+    }
 
     /**
      * @return BelongsTo<Tenant, $this>
