@@ -18,6 +18,11 @@ class AccountsPayable extends Model
         'tenant_id',
         'goods_receipt_id',
         'supplier_id',
+        'invoice_number',
+        'invoice_date',
+        'due_date',
+        'payment_terms_days',
+        'priority',
         'total_amount',
         'amount_paid',
         'status',
@@ -33,6 +38,10 @@ class AccountsPayable extends Model
             'total_amount' => 'decimal:4',
             'amount_paid' => 'decimal:4',
             'status' => AccountingOpenItemStatus::class,
+            'invoice_date' => 'date',
+            'due_date' => 'date',
+            'payment_terms_days' => 'integer',
+            'priority' => 'integer',
             'posted_at' => 'datetime',
         ];
     }
@@ -67,5 +76,13 @@ class AccountsPayable extends Model
     public function paymentAllocations(): HasMany
     {
         return $this->hasMany(SupplierPaymentAllocation::class, 'accounts_payable_id');
+    }
+
+    /**
+     * @return HasMany<SupplierPaymentRunItem, $this>
+     */
+    public function paymentRunItems(): HasMany
+    {
+        return $this->hasMany(SupplierPaymentRunItem::class, 'accounts_payable_id');
     }
 }

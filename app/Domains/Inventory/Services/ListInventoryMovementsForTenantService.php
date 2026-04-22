@@ -31,7 +31,7 @@ class ListInventoryMovementsForTenantService
                 'reference' => function (MorphTo $morphTo): void {
                     $morphTo->morphWith([
                         GoodsReceiptLine::class => ['goodsReceipt.purchaseOrder'],
-                        SalesShipmentLine::class => ['salesShipment.salesOrder'],
+                        SalesShipmentLine::class => ['salesShipment.salesOrder', 'salesOrderLine'],
                     ]);
                 },
             ]);

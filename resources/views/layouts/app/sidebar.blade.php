@@ -54,6 +54,9 @@
                     <flux:sidebar.item icon="arrow-down-tray" :href="route('accounting.supplier-payments.create')" :current="request()->routeIs('accounting.supplier-payments.*')" wire:navigate>
                         {{ __('Supplier Payments') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="queue-list" :href="route('accounting.payment-runs.index')" :current="request()->routeIs('accounting.payment-runs.*')" wire:navigate>
+                        {{ __('Payment Runs') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="arrow-up-tray" :href="route('accounting.customer-payments.create')" :current="request()->routeIs('accounting.customer-payments.*')" wire:navigate>
                         {{ __('Customer Payments') }}
                     </flux:sidebar.item>

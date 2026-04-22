@@ -35,6 +35,8 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::livewire('sales/orders', 'pages::sales.orders.index')->name('sales.orders.index');
 
     Route::livewire('accounting/payables', 'pages::accounting.payables.index')->name('accounting.payables.index');
+    Route::livewire('accounting/payment-runs', 'pages::accounting.payment-runs.index')->name('accounting.payment-runs.index');
+    Route::livewire('accounting/payment-runs/{id}', 'pages::accounting.payment-runs.show')->name('accounting.payment-runs.show');
     Route::livewire('accounting/receivables', 'pages::accounting.receivables.index')->name('accounting.receivables.index');
     Route::livewire('accounting/supplier-payments/create', 'pages::accounting.supplier-payments.create')->name('accounting.supplier-payments.create');
     Route::livewire('accounting/customer-payments/create', 'pages::accounting.customer-payments.create')->name('accounting.customer-payments.create');

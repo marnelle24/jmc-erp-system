@@ -9,11 +9,12 @@ use App\Models\PurchaseOrderLine;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class GetSupplierDashboardMetricsService
 {
     /**
-     * Open AP and aging use `posted_at` as the reference date (no separate due date on payables).
+     * Open AP aging uses `due_date` when present, otherwise falls back to `posted_at`.
      *
      * @return array{
      *     open_ap_balance: string,
@@ -29,12 +30,16 @@ class GetSupplierDashboardMetricsService
      */
     public function execute(int $tenantId, Supplier $supplier): array
     {
+        $supportsDueDate = Schema::hasColumn('accounts_payable', 'due_date');
+
         $openPayables = AccountsPayable::query()
             ->where('tenant_id', $tenantId)
             ->where('supplier_id', $supplier->id)
             ->whereIn('status', [AccountingOpenItemStatus::Open, AccountingOpenItemStatus::Partial])
             ->whereNotNull('posted_at')
-            ->get(['total_amount', 'amount_paid', 'posted_at']);
+            ->get($supportsDueDate
+                ? ['total_amount', 'amount_paid', 'posted_at', 'due_date']
+                : ['total_amount', 'amount_paid', 'posted_at']);
 
         $openApBalance = '0';
         $aging030 = '0';
@@ -50,8 +55,10 @@ class GetSupplierDashboardMetricsService
             }
             $openApBalance = bcadd($openApBalance, $balance, 4);
 
-            $posted = Carbon::parse($payable->posted_at)->startOfDay();
-            $days = max(0, (int) $posted->diffInDays($today));
+            $agingReference = $supportsDueDate && $payable->due_date !== null
+                ? Carbon::parse($payable->due_date)->startOfDay()
+                : Carbon::parse($payable->posted_at)->startOfDay();
+            $days = max(0, (int) $agingReference->diffInDays($today));
 
             if ($days <= 30) {
                 $aging030 = bcadd($aging030, $balance, 4);

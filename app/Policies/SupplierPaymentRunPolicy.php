@@ -2,19 +2,19 @@
 
 namespace App\Policies;
 
-use App\Models\AccountsPayable;
+use App\Models\SupplierPaymentRun;
 use App\Models\User;
 
-class AccountsPayablePolicy
+class SupplierPaymentRunPolicy
 {
     public function viewAny(User $user): bool
     {
         return $this->onboardedToCurrentTenant($user);
     }
 
-    public function view(User $user, AccountsPayable $accountsPayable): bool
+    public function view(User $user, SupplierPaymentRun $supplierPaymentRun): bool
     {
-        return $user->tenants()->whereKey($accountsPayable->tenant_id)->exists();
+        return $user->tenants()->whereKey($supplierPaymentRun->tenant_id)->exists();
     }
 
     public function create(User $user): bool
@@ -22,9 +22,9 @@ class AccountsPayablePolicy
         return $this->onboardedToCurrentTenant($user);
     }
 
-    public function update(User $user, AccountsPayable $accountsPayable): bool
+    public function update(User $user, SupplierPaymentRun $supplierPaymentRun): bool
     {
-        return $user->tenants()->whereKey($accountsPayable->tenant_id)->exists();
+        return $user->tenants()->whereKey($supplierPaymentRun->tenant_id)->exists();
     }
 
     private function onboardedToCurrentTenant(User $user): bool

@@ -176,12 +176,12 @@ class extends Component {
 
             @if ($this->openPayables->isNotEmpty())
                 <div>
-                    <flux:heading size="sm" class="mb-2">{{ __('Allocate to open payables') }}</flux:heading>
+                    <flux:heading size="sm" class="mb-2">{{ __('Invoices from this supplier') }}</flux:heading>
                     <div class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                             <thead class="bg-zinc-50 dark:bg-zinc-800/50">
                                 <tr>
-                                    <th class="px-4 py-2 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Payable') }}</th>
+                                    <th class="px-4 py-2 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Sales Invoice') }}</th>
                                     <th class="px-4 py-2 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Remaining') }}</th>
                                     <th class="px-4 py-2 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Amount') }}</th>
                                 </tr>
@@ -195,7 +195,7 @@ class extends Component {
                                         );
                                     @endphp
                                     <tr wire:key="alloc-ap-{{ $ap->id }}">
-                                        <td class="px-4 py-2 font-medium text-zinc-900 dark:text-zinc-100">#{{ $ap->id }}</td>
+                                        <td class="px-4 py-2 font-medium text-zinc-900 dark:text-zinc-100">{{ $ap->invoice_number }}</td>
                                         <td class="px-4 py-2 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $rem, null, 4) }}</td>
                                         <td class="px-4 py-2 text-end">
                                             <flux:input

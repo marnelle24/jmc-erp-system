@@ -5,7 +5,6 @@ use App\Enums\SupplierStatus;
 use App\Models\AccountsPayable;
 use App\Models\GoodsReceipt;
 use App\Models\PurchaseOrder;
-use App\Models\Rfq;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Support\TenantMoney;
@@ -49,7 +48,7 @@ class extends Component {
 
     private function normalizeTab(string $tab): string
     {
-        $allowed = ['overview', 'purchase_orders', 'rfqs', 'receipts_ap', 'payments'];
+        $allowed = ['overview', 'purchase_orders', 'receipts_ap', 'payments'];
 
         return in_array($tab, $allowed, true) ? $tab : 'overview';
     }
@@ -66,21 +65,6 @@ class extends Component {
             ->where('supplier_id', $this->supplier->id)
             ->with('lines')
             ->latest('order_date')
-            ->latest('id')
-            ->limit(50)
-            ->get();
-    }
-
-    /**
-     * @return Collection<int, Rfq>
-     */
-    public function getRfqsProperty()
-    {
-        $tenantId = (int) session('current_tenant_id');
-
-        return Rfq::query()
-            ->where('tenant_id', $tenantId)
-            ->where('supplier_id', $this->supplier->id)
             ->latest('id')
             ->limit(50)
             ->get();
@@ -187,9 +171,6 @@ class extends Component {
         </button>
         <button type="button" wire:click="setTab('purchase_orders')" class="{{ $tabClass }} {{ $tab === 'purchase_orders' ? $tabActive : $tabIdle }}">
             {{ __('Purchase Orders') }}
-        </button>
-        <button type="button" wire:click="setTab('rfqs')" class="{{ $tabClass }} {{ $tab === 'rfqs' ? $tabActive : $tabIdle }}">
-            {{ __('Purchase Requests') }}
         </button>
         <button type="button" wire:click="setTab('receipts_ap')" class="{{ $tabClass }} {{ $tab === 'receipts_ap' ? $tabActive : $tabIdle }}">
             {{ __('Accounts Payables') }}
@@ -336,39 +317,6 @@ class extends Component {
                                 <flux:table.cell align="end" class="px-6! tabular-nums">{{ $po->lines->count() }}</flux:table.cell>
                                 <flux:table.cell align="end" class="px-6!">
                                     <flux:button size="sm" variant="ghost" :href="route('procurement.purchase-orders.show', $po->id)" wire:navigate>
-                                        {{ __('View') }}
-                                    </flux:button>
-                                </flux:table.cell>
-                            </flux:table.row>
-                        @endforeach
-                    </flux:table.rows>
-                </flux:table>
-            @endif
-        </flux:card>
-    @endif
-
-    @if ($tab === 'rfqs')
-        <flux:card class="overflow-hidden p-0">
-            @if ($this->rfqs->isEmpty())
-                <div class="p-8">
-                    <flux:callout icon="chat-bubble-left-right" color="zinc" inline :heading="__('No RFQs')" :text="__('Send a request for quotation to this supplier.')" />
-                </div>
-            @else
-                <flux:table>
-                    <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
-                        <flux:table.column class="px-6!">{{ __('Reference') }}</flux:table.column>
-                        <flux:table.column class="px-6!">{{ __('Status') }}</flux:table.column>
-                        <flux:table.column class="px-6!">{{ __('Title') }}</flux:table.column>
-                        <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!"></flux:table.column>
-                    </flux:table.columns>
-                    <flux:table.rows>
-                        @foreach ($this->rfqs as $rfq)
-                            <flux:table.row :key="'rfq-'.$rfq->id">
-                                <flux:table.cell variant="strong" class="px-6! font-mono">{{ $rfq->reference_code }}</flux:table.cell>
-                                <flux:table.cell class="px-6!">{{ \Illuminate\Support\Str::headline($rfq->status->value) }}</flux:table.cell>
-                                <flux:table.cell class="px-6!">{{ $rfq->title ?: '—' }}</flux:table.cell>
-                                <flux:table.cell align="end" class="px-6!">
-                                    <flux:button size="sm" variant="ghost" :href="route('procurement.rfqs.show', $rfq->id)" wire:navigate>
                                         {{ __('View') }}
                                     </flux:button>
                                 </flux:table.cell>

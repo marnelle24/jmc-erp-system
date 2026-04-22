@@ -22,6 +22,11 @@ class SupplierPaymentPolicy
         return $this->onboardedToCurrentTenant($user);
     }
 
+    public function update(User $user, SupplierPayment $supplierPayment): bool
+    {
+        return $user->tenants()->whereKey($supplierPayment->tenant_id)->exists();
+    }
+
     private function onboardedToCurrentTenant(User $user): bool
     {
         $tenantId = session('current_tenant_id');

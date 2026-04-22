@@ -57,4 +57,12 @@ class SupplierPayment extends Model
     {
         return $this->hasMany(SupplierPaymentAllocation::class);
     }
+
+    /**
+     * @return HasMany<SupplierPaymentRunItem, $this>
+     */
+    public function paymentRunItems(): HasMany
+    {
+        return $this->hasMany(SupplierPaymentRunItem::class);
+    }
 }
