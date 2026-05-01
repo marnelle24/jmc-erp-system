@@ -254,12 +254,13 @@ class extends Component {
     public function categoryLabel(string $category): string
     {
         return match ($category) {
-            'rfq' => __('RFQ'),
+            'rfq' => __('Purchase Request'),
             'purchase_order' => __('Purchase'),
             'goods_receipt' => __('Receipt'),
             'inventory_movement' => __('Movement'),
-            'sales_order' => __('Sales order'),
-            'sales_shipment' => __('Shipment'),
+            'sales_invoice' => __('Sales Invoice'),
+            'sales_order' => __('Sales Order'),
+            'sales_shipment' => __('Sales Order'),
             default => $category,
         };
     }
@@ -654,12 +655,12 @@ class extends Component {
                     @php
                         /** @var ProductActivityTimelineEntry $entry */
                         $color = match ($this->categoryLabel($entry->category)) {
-                            'RFQ' => 'blue',
-                            'Purchase' => 'emerald',
-                            'Receipt' => 'emerald',
+                            'Purchase Request' => 'blue',
+                            'Purchase' => 'amber',
+                            'Receipt' => 'purple',
                             'Movement' => 'violet',
-                            'Sales order' => 'amber',
-                            'Shipment' => 'amber',
+                            'Sales Invoice' => 'emerald',
+                            'Sales Order' => 'emerald',
                             'Invoice' => 'purple',
                             default => 'zinc',
                         };

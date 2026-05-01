@@ -313,7 +313,7 @@ class extends Component {
                             <flux:table.row :key="'po-'.$po->id">
                                 <flux:table.cell variant="strong" class="px-6! font-mono">{{ $po->reference_code }}</flux:table.cell>
                                 <flux:table.cell class="px-6!">{{ $po->order_date->format('Y-m-d') }}</flux:table.cell>
-                                <flux:table.cell class="px-6!">{{ \Illuminate\Support\Str::headline($po->status->value) }}</flux:table.cell>
+                                <flux:table.cell class="px-6!">{{ $po->status->value === 'cancelled' ? __('Close PO') : \Illuminate\Support\Str::headline($po->status->value) }}</flux:table.cell>
                                 <flux:table.cell align="end" class="px-6! tabular-nums">{{ $po->lines->count() }}</flux:table.cell>
                                 <flux:table.cell align="end" class="px-6!">
                                     <flux:button size="sm" variant="ghost" :href="route('procurement.purchase-orders.show', $po->id)" wire:navigate>
@@ -345,7 +345,7 @@ class extends Component {
                             <flux:table.column class="px-6!">{{ __('PO') }}</flux:table.column>
                             <flux:table.column class="px-6!">{{ __('Received') }}</flux:table.column>
                             <flux:table.column class="px-6!">{{ __('Supplier invoice ref.') }}</flux:table.column>
-                            <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!"></flux:table.column>
+                            <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!">{{ __('Receipt') }}</flux:table.column>
                         </flux:table.columns>
                         <flux:table.rows>
                             @foreach ($this->goodsReceipts as $gr)
@@ -355,9 +355,14 @@ class extends Component {
                                     <flux:table.cell class="px-6!">{{ $gr->received_at->format('Y-m-d H:i') }}</flux:table.cell>
                                     <flux:table.cell class="px-6!">{{ $gr->supplier_invoice_reference ?: '—' }}</flux:table.cell>
                                     <flux:table.cell align="end" class="px-6!">
-                                        <flux:button size="sm" variant="ghost" :href="route('procurement.purchase-orders.show', $gr->purchase_order_id)" wire:navigate>
-                                            {{ __('PO') }}
-                                        </flux:button>
+                                        <div class="flex flex-wrap justify-end gap-1">
+                                            <flux:button size="sm" variant="ghost" :href="route('procurement.goods-receipts.show', $gr->id)" wire:navigate>
+                                                {{ __('Receipt') }}
+                                            </flux:button>
+                                            <flux:button size="sm" variant="outline" :href="route('procurement.purchase-orders.show', $gr->purchase_order_id)" wire:navigate>
+                                                {{ __('PO') }}
+                                            </flux:button>
+                                        </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach

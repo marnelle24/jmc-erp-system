@@ -167,7 +167,7 @@ class extends Component {
                 (string) $validated['close_reason'],
             );
             $this->modal('close-po')->close();
-            Flux::toast(variant: 'success', text: __('Purchase order closed. Remaining quantities were cancelled.'));
+            Flux::toast(variant: 'success', text: __('Purchase order closed. Remaining quantities are tagged as PO Close.'));
         } catch (\InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
         }
@@ -255,7 +255,7 @@ class extends Component {
                 </div>
                 <div class="mt-2 flex flex-wrap gap-2 pt-1">
                     <flux:badge :color="$purchaseOrder->status === PurchaseOrderStatus::Received ? 'emerald' : ($purchaseOrder->status === PurchaseOrderStatus::Cancelled ? 'rose' : ($purchaseOrder->status === PurchaseOrderStatus::PartiallyReceived ? 'amber' : 'teal'))">
-                        {{ ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}
+                        {{ $purchaseOrder->status === PurchaseOrderStatus::Cancelled ? __('PO Close') : ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}
                     </flux:badge>
                     <flux:badge color="zinc">{{ __(':count line items', ['count' => $purchaseOrder->lines->count()]) }}</flux:badge>
                     <flux:badge color="zinc">{{ __(':count receipts', ['count' => $purchaseOrder->goodsReceipts->count()]) }}</flux:badge>
@@ -294,7 +294,7 @@ class extends Component {
             icon="x-circle"
             :heading="__('Purchase order closed')"
             :text="__('Closed on :date by :user. Reason: :reason', [
-                'date' => optional($purchaseOrder->closed_at)?->format('Y-m-d H:i') ?? '—',
+                'date' => optional($purchaseOrder->closed_at)?->translatedFormat('F j, Y - h:i A') ?? '—',
                 'user' => $purchaseOrder->closedByUser?->name ?? __('Unknown user'),
                 'reason' => $purchaseOrder->close_reason,
             ])"
@@ -368,6 +368,7 @@ class extends Component {
                                     <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Avg. unit price') }}</th>
                                     <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Payable Total') }}</th>
                                     <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Open Amount') }}</th>
+                                    <th class="px-6 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Receipt') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -388,6 +389,11 @@ class extends Component {
                                         <td class="px-6 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ TenantMoney::format((float) $this->receiptWeightedAverageUnitCost($receipt), null, 4) }}</td>
                                         <td class="px-6 py-3 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ TenantMoney::format((float) ($payable?->total_amount ?? 0), null, 2) }}</td>
                                         <td class="px-6 py-3 text-end tabular-nums">{{ TenantMoney::format((float) $receiptOpen, null, 2) }}</td>
+                                        <td class="px-6 py-3 text-end">
+                                            <flux:button size="xs" variant="ghost" :href="route('procurement.goods-receipts.show', $receipt->id)" wire:navigate>
+                                                {{ __('View') }}
+                                            </flux:button>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -406,7 +412,7 @@ class extends Component {
                 <div class="space-y-2 text-sm text-zinc-700 dark:text-zinc-300 border-t border-zinc-200 pt-2 dark:border-zinc-700 mt-3">
                     <div class="flex items-center justify-between">
                         <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('Current status') }}</flux:text>
-                        <flux:text class="text-sm text-zinc-900 dark:text-zinc-100 font-medium">{{ ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}</flux:text>
+                        <flux:text class="text-sm text-zinc-900 dark:text-zinc-100 font-medium">{{ $purchaseOrder->status === PurchaseOrderStatus::Cancelled ? __('PO Close') : ucfirst(str_replace('_', ' ', $purchaseOrder->status->value)) }}</flux:text>
                     </div>
                     <div class="flex items-center justify-between">
                         <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('Receipts posted') }}</flux:text>
@@ -443,7 +449,7 @@ class extends Component {
                 <div>
                     <flux:heading size="lg">{{ __('Close purchase order') }}</flux:heading>
                     <flux:text class="mt-1">
-                        {{ __('Closing will cancel all remaining unreceived quantities and lock this PO from further receiving.') }}
+                        {{ __('Closing will mark remaining unreceived quantities as PO Close and lock this PO from further receiving.') }}
                     </flux:text>
                 </div>
 
@@ -453,7 +459,7 @@ class extends Component {
                         :label="__('Reason for closure')"
                         rows="3"
                         required
-                        :placeholder="__('Example: Supplier discontinued remaining items and approved cancellation.')"
+                        :placeholder="__('Example: Supplier discontinued remaining items and approved PO Close.')"
                     />
                     <div class="flex justify-end gap-2">
                         <flux:modal.close>

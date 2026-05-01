@@ -202,7 +202,9 @@ class extends Component {
                                             PurchaseOrderStatus::Received->value => 'bg-emerald-100 text-emerald-800 border-emerald-200',
                                         };
                                     @endphp
-                                    <span class="capitalize {{ $statusColor }} px-2 py-1 rounded-md text-xs! font-medium border dark:border-zinc-700">{{ str_replace('_', ' ', $po->status->value) }}</span>
+                                    <span class="capitalize {{ $statusColor }} px-2 py-1 rounded-md text-xs! font-medium border dark:border-zinc-700">
+                                        {{ $po->status === PurchaseOrderStatus::Cancelled ? __('Close PO') : str_replace('_', ' ', $po->status->value) }}
+                                    </span>
                                 </flux:table.cell>
                                 <flux:table.cell align="end" class="px-6!">
                                     <div class="flex items-center justify-end gap-1">
@@ -311,7 +313,7 @@ class extends Component {
                         </div>
 
                         <div class="flex shrink-0 flex-wrap gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-                            <flux:button variant="primary" type="submit">{{ __('Post receipt') }}</flux:button>
+                            <flux:button variant="primary" type="submit">{{ __('Receive Items') }}</flux:button>
                             <flux:button variant="ghost" type="button" wire:click="closeReceiveModal">{{ __('Cancel') }}</flux:button>
                         </div>
                     </form>

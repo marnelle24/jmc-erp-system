@@ -11,7 +11,7 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
+                {{-- <flux:sidebar.group :heading="__('Platform')" class="grid"> --}}
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
@@ -21,7 +21,7 @@
                     <flux:sidebar.item icon="clipboard-document-list" :href="route('inventory.movements.index')" :current="request()->routeIs('inventory.*')" wire:navigate>
                         {{ __('Inventory') }}
                     </flux:sidebar.item>
-                </flux:sidebar.group>
+                {{-- </flux:sidebar.group> --}}
 
                 <flux:sidebar.group :heading="__('Procurement')" class="grid">
                     <flux:sidebar.item icon="building-storefront" :href="route('suppliers.index')" :current="request()->routeIs('suppliers.*')" wire:navigate>
@@ -32,6 +32,9 @@
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="shopping-cart" :href="route('procurement.purchase-orders.index')" :current="request()->routeIs('procurement.purchase-orders.*')" wire:navigate>
                         {{ __('Purchase Orders') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="arrow-down-tray" :href="route('procurement.goods-receipts.index')" :current="request()->routeIs('procurement.goods-receipts.*')" wire:navigate>
+                        {{ __('Receipts (Stock In)') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
