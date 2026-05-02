@@ -242,14 +242,15 @@ class extends Component {
                 <flux:separator class="my-5" />
                 <form wire:submit="saveProduct" class="flex flex-col gap-1">
                     <flux:fieldset>
-                        <flux:input wire:model="name" :label="__('Name')" type="text" required />
+                        <flux:input wire:model="name" :label="__('Name')" placeholder="Product name" type="text" required />
                         <flux:input
                             wire:model="sku"
                             :label="__('SKU')"
+                            placeholder="SKU / Product code"
                             type="text"
                             :disabled="(bool) $this->editingProductId"
                         />
-                        <flux:textarea wire:model="description" :label="__('Description')" rows="3" />
+                        <flux:textarea wire:model="description" :label="__('Description')" placeholder="About the product eg. Brand or additional details" rows="3" />
                     </flux:fieldset>
                     <div class="my-4 flex flex-col gap-2 space-y-2">
                         <flux:button variant="primary" type="submit" class="w-full cursor-pointer">
