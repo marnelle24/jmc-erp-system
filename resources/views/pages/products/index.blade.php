@@ -5,6 +5,7 @@ use App\Domains\Inventory\Services\UpdateProductService;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
@@ -29,6 +30,13 @@ class extends Component {
 
     public string $search = '';
 
+    /** @var list<int> */
+    public array $category_ids = [];
+
+    public string $new_categories_input = '';
+
+    public ?int $categoryFilter = null;
+
     public function mount(): void
     {
         Gate::authorize('viewAny', Product::class);
@@ -43,6 +51,24 @@ class extends Component {
     public function updatedSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedCategoryFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, ProductCategory>
+     */
+    public function getProductCategoriesProperty()
+    {
+        $tenantId = (int) session('current_tenant_id');
+
+        return ProductCategory::query()
+            ->where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->get();
     }
 
     public function startEdit(int $productId): void
@@ -60,13 +86,20 @@ class extends Component {
         $this->name = $product->name;
         $this->sku = $product->sku ?? '';
         $this->description = $product->description ?? '';
+        $this->category_ids = $product->categories
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+        $this->new_categories_input = '';
         $this->resetValidation();
     }
 
     public function cancelEdit(): void
     {
         $this->editingProductId = null;
-        $this->reset('name', 'sku', 'description');
+        $this->reset('name', 'sku', 'description', 'new_categories_input');
+        $this->category_ids = [];
         $this->resetValidation();
     }
 
@@ -82,7 +115,7 @@ class extends Component {
 
             Gate::authorize('update', $product);
 
-            $validated = $this->validate((new UpdateProductRequest)->rules());
+            $validated = $this->validate((new UpdateProductRequest)->rulesForProductsIndex());
             $update->execute($product, $validated);
 
             $this->cancelEdit();
@@ -98,7 +131,8 @@ class extends Component {
 
         $create->execute($tenantId, $validated);
 
-        $this->reset('name', 'sku', 'description');
+        $this->reset('name', 'sku', 'description', 'new_categories_input');
+        $this->category_ids = [];
         $this->resetPage();
 
         Flux::toast(variant: 'success', text: __('Product added.'));
@@ -110,14 +144,23 @@ class extends Component {
 
         return Product::query()
             ->where('tenant_id', $tenantId)
+            ->when($this->categoryFilter !== null, function (Builder $query): void {
+                $query->whereHas('categories', function (Builder $nested): void {
+                    $nested->where('product_categories.id', $this->categoryFilter);
+                });
+            })
             ->when(trim($this->search) !== '', function (Builder $query): void {
                 $term = '%'.trim($this->search).'%';
                 $query->where(function (Builder $nested) use ($term): void {
                     $nested->where('name', 'like', $term)
                         ->orWhere('sku', 'like', $term)
-                        ->orWhere('description', 'like', $term);
+                        ->orWhere('description', 'like', $term)
+                        ->orWhereHas('categories', function (Builder $cat) use ($term): void {
+                            $cat->where('name', 'like', $term);
+                        });
                 });
             })
+            ->with(['categories'])
             ->withSum('inventoryMovements', 'quantity')
             ->orderBy('name')
             ->paginate(12)
@@ -145,12 +188,23 @@ class extends Component {
                             <flux:heading size="lg">{{ __('Products Master List') }}</flux:heading>
                             <flux:text class="mt-1 text-sm">{{ __('All products recorded in the system, with on-hand from posted movements.') }}</flux:text>
                         </div>
-                        <div class="w-full sm:max-w-xs shrink-0">
-                            <flux:input
-                                type="search"
-                                wire:model.live.debounce.400ms="search"
-                                placeholder="{{ __('Name, SKU, or description…') }}"
-                            />
+                        <div class="flex w-full flex-col gap-3 sm:max-w-md sm:flex-row sm:items-end">
+                            <div class="w-full sm:max-w-[13rem] shrink-0">
+                                <flux:select wire:model.live="categoryFilter" :label="__('Category')" :placeholder="__('All categories')">
+                                    <flux:select.option value="">{{ __('All categories') }}</flux:select.option>
+                                    @foreach ($this->productCategories as $cat)
+                                        <flux:select.option :value="$cat->id">{{ $cat->name }}</flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <flux:input
+                                    type="search"
+                                    wire:model.live.debounce.400ms="search"
+                                    :label="__('Search')"
+                                    placeholder="{{ __('Name, SKU, description, category…') }}"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -168,6 +222,7 @@ class extends Component {
                         <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                             <flux:table.column class="px-6!">{{ __('Name') }}</flux:table.column>
                             <flux:table.column class="px-6!">{{ __('SKU') }}</flux:table.column>
+                            <flux:table.column class="min-w-[8rem] px-6!">{{ __('Categories') }}</flux:table.column>
                             <flux:table.column align="end" class="px-6!">{{ __('On hand') }}</flux:table.column>
                             <flux:table.column align="end" class="w-0 whitespace-nowrap px-6!">{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
@@ -184,6 +239,15 @@ class extends Component {
                                         @else
                                             <flux:text class="text-zinc-400">—</flux:text>
                                         @endif
+                                    </flux:table.cell>
+                                    <flux:table.cell class="px-6! align-top">
+                                        <div class="flex max-w-xs flex-wrap gap-1">
+                                            @forelse ($product->categories as $pcat)
+                                                <flux:badge color="zinc" size="sm" inset="top bottom">{{ $pcat->name }}</flux:badge>
+                                            @empty
+                                                <flux:text class="text-zinc-400">—</flux:text>
+                                            @endforelse
+                                        </div>
                                     </flux:table.cell>
                                     <flux:table.cell align="end" class="px-6!">
                                         <span class="tabular-nums">{{ number_format((float) ($product->inventory_movements_sum_quantity ?? 0), 2) }}</span>
@@ -234,9 +298,9 @@ class extends Component {
                 <flux:heading size="lg">{{ $this->editingProductId ? __('Edit product') : __('Add product') }}</flux:heading>
                 <flux:text class="mt-1 text-sm">
                     @if ($this->editingProductId)
-                        {{ __('Update the name or description. SKU cannot be changed after creation.') }}
+                        {{ __('Update the name, description, or categories. SKU cannot be changed after creation.') }}
                     @else
-                        {{ __('Name is required. Description is optional.') }}
+                        {{ __('Name is required. Assign one or more categories, or add new category names below.') }}
                     @endif
                 </flux:text>
                 <flux:separator class="my-5" />
@@ -251,6 +315,32 @@ class extends Component {
                             :disabled="(bool) $this->editingProductId"
                         />
                         <flux:textarea wire:model="description" :label="__('Description')" placeholder="About the product eg. Brand or additional details" rows="3" />
+                        <div class="mt-4 space-y-3">
+                            <flux:field>
+                                <flux:label>{{ __('Categories') }}</flux:label>
+                                <div class="max-h-36 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-3 dark:border-white/10 dark:bg-zinc-900/40">
+                                    @forelse ($this->productCategories as $cat)
+                                        <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                                            <input
+                                                type="checkbox"
+                                                wire:model="category_ids"
+                                                value="{{ $cat->id }}"
+                                                class="rounded border-zinc-300 text-zinc-900 dark:border-white/30 dark:bg-zinc-900"
+                                            />
+                                            <span>{{ $cat->name }}</span>
+                                        </label>
+                                    @empty
+                                        <flux:text class="text-sm text-zinc-500">{{ __('No saved categories yet — use the field below to create some.') }}</flux:text>
+                                    @endforelse
+                                </div>
+                            </flux:field>
+                            <flux:input
+                                wire:model="new_categories_input"
+                                :label="__('New categories')"
+                                :placeholder="__('Comma-separated, e.g. Parts, Consumables')"
+                                type="text"
+                            />
+                        </div>
                     </flux:fieldset>
                     <div class="my-4 flex flex-col gap-2 space-y-2">
                         <flux:button variant="primary" type="submit" class="w-full cursor-pointer">

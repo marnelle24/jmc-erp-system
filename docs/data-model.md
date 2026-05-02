@@ -30,6 +30,7 @@ This section describes **directional** entities for the JMC ERP domain. Physical
 ### Physical columns (inventory)
 
 - **`products`:** `tenant_id`, `name`, optional `sku` (unique per tenant), optional `description`, optional **`reorder_point`** and **`reorder_qty`** (minimum stock level and suggested reorder quantity for alerts).
+- **`product_categories`:** `tenant_id`, `name` (unique per tenant). **`category_product`** pivot links products to many categories for the same tenant.
 - **`inventory_movements`:** `tenant_id`, `product_id`, signed `quantity` (decimal), `movement_type` (`receipt`, `issue`, `adjustment`, `transfer`), optional `notes`, optional polymorphic `reference` (for example `goods_receipt_lines` for procurement receipts).
 
 On-hand quantity for a product is the **sum** of `inventory_movements.quantity` for that product (within the tenant).

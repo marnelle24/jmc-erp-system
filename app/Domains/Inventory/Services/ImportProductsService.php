@@ -48,6 +48,7 @@ class ImportProductsService
                     'name' => 0,
                     'sku' => 1,
                     'description' => 2,
+                    'categories' => 3,
                 ];
                 $lineNumber = 1;
             }
@@ -127,7 +128,24 @@ class ImportProductsService
                     continue;
                 }
 
-                $this->createProduct->execute($tenantId, $validator->validated());
+                $product = $this->createProduct->execute($tenantId, $validator->validated());
+
+                $categoriesCell = $map['categories'] !== null
+                    ? $this->pickCell($row, $map['categories'])
+                    : '';
+                if ($categoriesCell !== '') {
+                    $names = preg_split('/\s*[|]\s*/', $categoriesCell, -1, PREG_SPLIT_NO_EMPTY);
+                    if ($names !== false) {
+                        $names = array_values(array_filter(array_map(
+                            fn (string $n): string => trim($n),
+                            $names,
+                        )));
+                        if ($names !== []) {
+                            app(SyncProductCategoriesService::class)->execute($tenantId, $product, [], $names);
+                        }
+                    }
+                }
+
                 $created++;
                 $lineNumber++;
             }
@@ -143,7 +161,7 @@ class ImportProductsService
     }
 
     /**
-     * @return array{name: int, sku: int|null, description: int|null}|null
+     * @return array{name: int, sku: int|null, description: int|null, categories: int|null}|null
      */
     private function mapFromHeaderRow(array $row): ?array
     {
@@ -155,11 +173,13 @@ class ImportProductsService
 
         $skuIdx = array_search('sku', $lower, true);
         $descIdx = array_search('description', $lower, true);
+        $categoriesIdx = array_search('categories', $lower, true);
 
         return [
             'name' => $nameIdx,
             'sku' => $skuIdx === false ? null : $skuIdx,
             'description' => $descIdx === false ? null : $descIdx,
+            'categories' => $categoriesIdx === false ? null : $categoriesIdx,
         ];
     }
 

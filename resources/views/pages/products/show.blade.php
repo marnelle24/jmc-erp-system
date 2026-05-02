@@ -49,6 +49,7 @@ class extends Component {
         $tenantId = (int) session('current_tenant_id');
         $this->product = Product::query()
             ->where('tenant_id', $tenantId)
+            ->with('categories')
             ->findOrFail($id);
 
         Gate::authorize('view', $this->product);
@@ -132,6 +133,7 @@ class extends Component {
         ]);
 
         $this->product->refresh();
+        $this->product->load('categories');
 
         Flux::toast(variant: 'success', text: __('Reorder settings saved.'));
     }
@@ -282,6 +284,9 @@ class extends Component {
                 @if ($product->sku)
                     <flux:badge color="zinc" size="sm" class="font-mono">{{ $product->sku }}</flux:badge>
                 @endif
+                @foreach ($product->categories->sortBy('name') as $pCat)
+                    <flux:badge color="blue" size="sm" inset="top bottom">{{ $pCat->name }}</flux:badge>
+                @endforeach
             </div>
             <flux:text class="mt-1">{{ $product->description ?: __('Product profile with sales, inventory, charts, and movement analytics.') }}</flux:text>
         </div>

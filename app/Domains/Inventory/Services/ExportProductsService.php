@@ -20,17 +20,25 @@ class ExportProductsService
             }
 
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['name', 'sku', 'description']);
+            fputcsv($out, ['name', 'sku', 'description', 'categories']);
 
             Product::query()
                 ->where('tenant_id', $tenantId)
+                ->with('categories')
                 ->orderBy('name')
                 ->chunk(500, function ($products) use ($out): void {
                     foreach ($products as $product) {
+                        $categories = $product->categories
+                            ->pluck('name')
+                            ->sort()
+                            ->values()
+                            ->implode('|');
+
                         fputcsv($out, [
                             $product->name,
                             $product->sku ?? '',
                             $product->description ?? '',
+                            $categories,
                         ]);
                     }
                 });

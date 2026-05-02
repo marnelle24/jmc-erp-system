@@ -31,6 +31,12 @@ class StoreProductRequest extends FormRequest
                 Rule::unique('products', 'sku')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
             ],
             'description' => ['nullable', 'string', 'max:65535'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => [
+                'integer',
+                Rule::exists('product_categories', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
+            'new_categories_input' => ['nullable', 'string', 'max:2000'],
         ];
     }
 

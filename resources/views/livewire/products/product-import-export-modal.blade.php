@@ -17,7 +17,7 @@
             <div class="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-white/10">
                 <flux:heading size="sm">{{ __('Export') }}</flux:heading>
                 <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ __('Columns: name, sku, description (UTF-8, Excel-friendly).') }}
+                    {{ __('Columns: name, sku, description, categories (UTF-8, Excel-friendly). Categories use pipe | between names.') }}
                 </flux:text>
                 <div>
                     <flux:button type="button" variant="primary" size="sm" wire:click="export" class="cursor-pointer">
@@ -29,7 +29,7 @@
             <div class="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-white/10">
                 <flux:heading size="sm">{{ __('Import') }}</flux:heading>
                 <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ __('Use a header row with columns name, sku, and description (any order). If the first row is not a header, columns are read as name, sku, description.') }}
+                    {{ __('Use a header row with columns name, sku, description, and optional categories (any order). If the first row is not a header, columns are read as name, sku, description, categories.') }}
                 </flux:text>
 
                 @can('create', \App\Models\Product::class)
