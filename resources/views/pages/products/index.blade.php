@@ -6,8 +6,10 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use Flux\Flux;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,9 +27,22 @@ class extends Component {
 
     public ?int $editingProductId = null;
 
+    public string $search = '';
+
     public function mount(): void
     {
         Gate::authorize('viewAny', Product::class);
+    }
+
+    #[On('products-imported')]
+    public function refreshAfterImport(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
     }
 
     public function startEdit(int $productId): void
@@ -95,16 +110,29 @@ class extends Component {
 
         return Product::query()
             ->where('tenant_id', $tenantId)
+            ->when(trim($this->search) !== '', function (Builder $query): void {
+                $term = '%'.trim($this->search).'%';
+                $query->where(function (Builder $nested) use ($term): void {
+                    $nested->where('name', 'like', $term)
+                        ->orWhere('sku', 'like', $term)
+                        ->orWhere('description', 'like', $term);
+                });
+            })
             ->withSum('inventoryMovements', 'quantity')
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(12)
+            ->withPath(route('products.index', absolute: false))
+            ->withQueryString();
     }
 }; ?>
 
 <div class="flex w-full flex-1 flex-col gap-8">
-    <div>
-        <flux:heading size="xl">{{ __('Products Management') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Manage your products. Add, edit, and delete products as needed.') }}</flux:text>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <flux:heading size="xl">{{ __('Products Management') }}</flux:heading>
+            <flux:text class="mt-1">{{ __('Manage your products. Add, edit, and delete products as needed.') }}</flux:text>
+        </div>
+        <livewire:products.product-import-export-modal />
     </div>
 
     {{-- Flex keeps the form column on the right; min-w-0 lets the table shrink inside the row. --}}
@@ -112,19 +140,31 @@ class extends Component {
         <div class="min-w-0 w-full basis-full md:basis-0 md:flex-[3]">
             <flux:card class="flex flex-col overflow-hidden p-0 bg-neutral-100 dark:bg-neutral-700 border border-zinc-300 dark:border-zinc-300/40">
                 <div class="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
-                    <flux:heading size="lg">{{ __('Products Master List') }}</flux:heading>
-                    <flux:text class="mt-1 text-sm">{{ __('All products recorded in the system, with on-hand from posted movements.') }}</flux:text>
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <flux:heading size="lg">{{ __('Products Master List') }}</flux:heading>
+                            <flux:text class="mt-1 text-sm">{{ __('All products recorded in the system, with on-hand from posted movements.') }}</flux:text>
+                        </div>
+                        <div class="w-full sm:max-w-xs shrink-0">
+                            <flux:input
+                                type="search"
+                                wire:model.live.debounce.400ms="search"
+                                placeholder="{{ __('Name, SKU, or description…') }}"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 @if ($this->products->isEmpty())
                     <div class="p-6">
-                        <flux:callout icon="archive-box" color="zinc" inline :heading="__('No products yet')" :text="__('Add a product using the form beside this list. SKUs are optional but help when matching documents.')" />
+                        @if (trim($this->search) !== '')
+                            <flux:callout icon="magnifying-glass" color="zinc" inline :heading="__('No matching products')" :text="__('Try another term or clear the search box.')" />
+                        @else
+                            <flux:callout icon="archive-box" color="zinc" inline :heading="__('No products yet')" :text="__('Add a product using the form beside this list. SKUs are optional but help when matching documents.')" />
+                        @endif
                     </div>
                 @else
-                    <flux:table
-                        :paginate="$this->products->hasPages() ? $this->products : null"
-                        pagination:scroll-to
-                    >
+                    <flux:table>
                         <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                             <flux:table.column class="px-6!">{{ __('Name') }}</flux:table.column>
                             <flux:table.column class="px-6!">{{ __('SKU') }}</flux:table.column>
@@ -133,8 +173,11 @@ class extends Component {
                         </flux:table.columns>
                         <flux:table.rows>
                             @foreach ($this->products as $product)
-                                <flux:table.row :key="$product->id">
-                                    <flux:table.cell variant="strong" class="px-6!">{{ $product->name }}</flux:table.cell>
+                                <flux:table.row :key="$product->id" class="hover:bg-zinc-200/40 transition-all duration-300 dark:hover:bg-zinc-600/20">
+                                    <flux:table.cell variant="strong" class="px-6!">
+                                        {{ $product->name }}
+                                        <flux:text class="text-zinc-500 text-xs">{{ $product->description }}</flux:text>
+                                    </flux:table.cell>
                                     <flux:table.cell class="px-6!">
                                         @if ($product->sku)
                                             <flux:badge color="zinc" size="sm" inset="top bottom">{{ $product->sku }}</flux:badge>
@@ -160,7 +203,7 @@ class extends Component {
                                             <flux:button
                                                 type="button"
                                                 size="xs"
-                                                variant="filled"
+                                                variant="outline"
                                                 wire:click="startEdit({{ $product->id }})"
                                                 inset="top bottom"
                                                 class="border border-zinc-200 dark:border-white/40 cursor-pointer text-xs! p-1! px-2!"
@@ -175,6 +218,15 @@ class extends Component {
                     </flux:table>
                 @endif
             </flux:card>
+
+            @if (! $this->products->isEmpty() && $this->products->hasPages())
+                <div class="mt-4 flex justify-between px-1 sm:px-0 items-center gap-4">
+                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-400 w-full">
+                        {{ __('Showing') }} {{ $this->products->firstItem() }} {{ __('to') }} {{ $this->products->lastItem() }} {{ __('of') }} {{ $this->products->total() }} {{ __('entries') }}
+                    </flux:text>
+                    {{ $this->products->links('vendor.pagination.numbers-only') }}
+                </div>
+            @endif
         </div>
 
         <aside class="w-full min-w-0 shrink-0 basis-full md:basis-0 md:flex-[1] md:sticky md:top-4 md:self-start">
@@ -206,7 +258,7 @@ class extends Component {
                         @if ($this->editingProductId)
                             <flux:button 
                                 type="button" 
-                                variant="ghost" 
+                                variant="filled" 
                                 wire:click="cancelEdit"
                                 inset="top bottom"
                                 class="cursor-pointer text-xs! w-full border border-zinc-200 dark:border-white/40"

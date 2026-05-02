@@ -147,7 +147,9 @@ class extends Component {
             ->where('tenant_id', $tenantId)
             ->with('supplier')
             ->latest('order_date')
-            ->paginate(15);
+            ->paginate(12)
+            ->withPath(route('procurement.purchase-orders.index', absolute: false))
+            ->withQueryString();
     }
 }; ?>
 
@@ -172,10 +174,7 @@ class extends Component {
                     <flux:callout icon="document-text" color="zinc" inline :heading="__('No purchase orders yet')" :text="__('Create a purchase order to commit supplier buys and start receiving goods.')" />
                 </div>
             @else
-                <flux:table
-                    :paginate="$this->purchaseOrders->hasPages() ? $this->purchaseOrders : null"
-                    pagination:scroll-to
-                >
+                <flux:table>
                     <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                         <flux:table.column class="px-6!">{{ __('Reference') }}</flux:table.column>
                         <flux:table.column class="px-6!">{{ __('Supplier') }}</flux:table.column>
@@ -237,6 +236,15 @@ class extends Component {
                 </flux:table>
             @endif
         </flux:card>
+
+        @if (! $this->purchaseOrders->isEmpty() && $this->purchaseOrders->hasPages())
+            <div class="mt-4 flex justify-between px-1 sm:px-0 items-center gap-4">
+                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400 w-full">
+                    {{ __('Showing') }} {{ $this->purchaseOrders->firstItem() }} {{ __('to') }} {{ $this->purchaseOrders->lastItem() }} {{ __('of') }} {{ $this->purchaseOrders->total() }} {{ __('entries') }}
+                </flux:text>
+                {{ $this->purchaseOrders->links('vendor.pagination.numbers-only') }}
+            </div>
+        @endif
     </div>
 
     @if (Gate::allows('create', GoodsReceipt::class))

@@ -25,7 +25,8 @@ class extends Component {
             ->where('tenant_id', $tenantId)
             ->with(['supplier', 'creator', 'approver'])
             ->latest()
-            ->paginate(15);
+            ->paginate(12)
+            ->withPath(route('procurement.rfqs.index', absolute: false));
     }
 }; ?>
 
@@ -50,10 +51,7 @@ class extends Component {
                     <flux:callout icon="document-text" color="zinc" inline :heading="__('No RFQs yet')" :text="__('Create a purchase request to start the procurement process.')" />
                 </div>
             @else
-                <flux:table
-                    :paginate="$this->rfqs->hasPages() ? $this->rfqs : null"
-                    pagination:scroll-to
-                >
+                <flux:table>
                     <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                         <flux:table.column class="px-6!">{{ __('Reference') }}</flux:table.column>
                         <flux:table.column class="px-6!">{{ __('Supplier') }}</flux:table.column>
@@ -108,5 +106,14 @@ class extends Component {
                 </flux:table>
             @endif
         </flux:card>
+
+        @if (! $this->rfqs->isEmpty() && $this->rfqs->hasPages())
+            <div class="mt-4 flex justify-between px-1 sm:px-0 items-center gap-4">
+                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400 w-full">
+                    {{ __('Showing') }} {{ $this->rfqs->firstItem() }} {{ __('to') }} {{ $this->rfqs->lastItem() }} {{ __('of') }} {{ $this->rfqs->total() }} {{ __('entries') }}
+                </flux:text>
+                {{ $this->rfqs->links('vendor.pagination.numbers-only') }}
+            </div>
+        @endif
     </div>
 </div>

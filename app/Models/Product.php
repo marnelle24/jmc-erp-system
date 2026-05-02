@@ -13,6 +13,20 @@ class Product extends Model
     /** @use HasFactory<ProductFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::creating(function (Product $product): void {
+            if ($product->getAttribute('tenant_id') !== null) {
+                return;
+            }
+
+            $sessionTenant = session('current_tenant_id');
+            $product->tenant_id = is_numeric($sessionTenant)
+                ? (int) $sessionTenant
+                : 1;
+        });
+    }
+
     /**
      * @var list<string>
      */

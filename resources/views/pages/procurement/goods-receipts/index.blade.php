@@ -106,7 +106,10 @@ class extends Component {
             'po_reference' => $this->poSearch,
         ];
 
-        return app(ListGoodsReceiptsForTenantService::class)->paginate($tenantId, 15, $filters);
+        return app(ListGoodsReceiptsForTenantService::class)
+            ->paginate($tenantId, 12, $filters)
+            ->withPath(route('procurement.goods-receipts.index', absolute: false))
+            ->withQueryString();
     }
 
     /**
@@ -210,10 +213,7 @@ class extends Component {
                     />
                 </div>
             @else
-                <flux:table
-                    :paginate="$this->receipts->hasPages() ? $this->receipts : null"
-                    pagination:scroll-to
-                >
+                <flux:table>
                     <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                         <flux:table.column class="px-6!">{{ __('Receipt') }}</flux:table.column>
                         <flux:table.column class="px-6!">{{ __('Purchase order') }}</flux:table.column>
@@ -273,5 +273,14 @@ class extends Component {
                 </flux:table>
             @endif
         </flux:card>
+
+        @if (! $this->receipts->isEmpty() && $this->receipts->hasPages())
+            <div class="mt-4 flex justify-between px-1 sm:px-0 items-center gap-4">
+                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400 w-full">
+                    {{ __('Showing') }} {{ $this->receipts->firstItem() }} {{ __('to') }} {{ $this->receipts->lastItem() }} {{ __('of') }} {{ $this->receipts->total() }} {{ __('entries') }}
+                </flux:text>
+                {{ $this->receipts->links('vendor.pagination.numbers-only') }}
+            </div>
+        @endif
     </div>
 </div>
