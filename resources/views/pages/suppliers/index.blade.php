@@ -55,7 +55,7 @@ class extends Component {
                 });
             })
             ->orderBy('name')
-            ->paginate(15)
+            ->paginate(12)
             ->withPath(route('suppliers.index', absolute: false))
             ->withQueryString();
     }
@@ -70,7 +70,7 @@ class extends Component {
         <livewire:suppliers.supplier-form-modal />
     </div>
 
-    <div class="w-full min-w-0">
+    <div class="min-w-0 w-full">
         <flux:card class="flex flex-col overflow-hidden p-0 bg-neutral-100 dark:bg-neutral-700 border border-zinc-300 dark:border-zinc-300/40">
             <div class="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -97,10 +97,7 @@ class extends Component {
                     @endif
                 </div>
             @else
-                <flux:table
-                    :paginate="$this->suppliers->hasPages() ? $this->suppliers : null"
-                    pagination:scroll-to
-                >
+                <flux:table>
                     <flux:table.columns sticky class="bg-neutral-200 dark:bg-neutral-600">
                         <flux:table.column class="px-6!">{{ __('Name') }}</flux:table.column>
                         <flux:table.column class="px-6!">{{ __('Code') }}</flux:table.column>
@@ -168,5 +165,14 @@ class extends Component {
                 </flux:table>
             @endif
         </flux:card>
+
+        @if (! $this->suppliers->isEmpty() && $this->suppliers->hasPages())
+            <div class="mt-4 flex justify-between px-1 sm:px-0 items-center gap-4">
+                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400 w-full">
+                    {{ __('Showing') }} {{ $this->suppliers->firstItem() }} {{ __('to') }} {{ $this->suppliers->lastItem() }} {{ __('of') }} {{ $this->suppliers->total() }} {{ __('entries') }}
+                </flux:text>
+                {{ $this->suppliers->links('vendor.pagination.numbers-only') }}
+            </div>
+        @endif
     </div>
 </div>
